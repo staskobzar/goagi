@@ -2,7 +2,6 @@ package goagi
 
 import (
 	"bufio"
-	"errors"
 	"io"
 	"strings"
 )
@@ -12,6 +11,11 @@ type AGI struct {
 	env map[string]string
 	arg []string
 }
+
+var (
+	// EInvalEnv error returned when AGI environment header is not valid
+	EInvalEnv = errorNew("Invalid AGI env variable")
+)
 
 func newInterface(in io.Reader, out io.Writer) (*AGI, error) {
 	agi := &AGI{make(map[string]string), make([]string, 0)}
@@ -47,11 +51,11 @@ func (agi *AGI) EnvArgs() []string {
 
 func (agi *AGI) setEnv(line string) error {
 	if !strings.HasPrefix(line, "agi_") {
-		return errors.New("Invalid AGI env variable: " + line)
+		return EInvalEnv.withInfo(line)
 	}
 	idx := strings.Index(line, ": ")
 	if idx == -1 {
-		return errors.New("Invalid AGI env variable: " + line)
+		return EInvalEnv.withInfo(line)
 	}
 	if strings.HasPrefix(line, "agi_arg_") {
 		agi.arg = append(agi.arg, line[idx+2:len(line)])
