@@ -18,13 +18,8 @@ func cmdParse(text string) (*agiResp, error) {
 	resp := &agiResp{}
 	lex := &lexer{input: text}
 
-	scanner, err := scanCode(lex, resp)
-	if err != nil {
-		return nil, err
-	}
 	// state machine
-	for {
-		scanner, err := scanner(lex, resp)
+	for scanner, err := scanCode(lex, resp); ; scanner, err = scanner(lex, resp) {
 		if err != nil {
 			return nil, err
 		}
@@ -45,9 +40,6 @@ func scanCode(l *lexer, resp *agiResp) (scanFunc, error) {
 	}
 	for {
 		char = l.next()
-		if char == eof {
-			return nil, EInvalResp.withInfo("scanCode:eof:" + l.input)
-		}
 		if !unicode.IsDigit(char) {
 			l.backup()
 			break
@@ -55,7 +47,11 @@ func scanCode(l *lexer, resp *agiResp) (scanFunc, error) {
 		char -= '0'
 		resp.code = resp.code*10 + int(char)
 	}
-	l.start = l.pos
+	l.ignore()
+
+	if resp.code > 500 {
+		return scanError, nil
+	}
 	return scanResult, nil
 }
 
@@ -67,26 +63,70 @@ func scanResult(l *lexer, resp *agiResp) (scanFunc, error) {
 	}
 	l.ignore()
 
-	if pattern != l.input[l.pos:l.pos+len(pattern)] {
+	if !l.hasPrefix(pattern) {
 		return nil, EInvalResp.withInfo("scanResult:result= expected:" + l.input)
 	}
 	l.pos += len(pattern)
-	l.start = l.pos
-	if l.pos > len(l.input) {
-		return nil, EInvalResp.withInfo("scanResult:eof:" + l.input)
-	}
+	l.ignore()
 
 	for {
 		char = l.next()
-		if char == eof {
-			return nil, EInvalResp.withInfo("scanResult:eof:" + l.input)
-		}
-		if unicode.IsSpace(char) {
+		if unicode.IsSpace(char) || char == eof {
 			l.backup()
 			break
 		}
 	}
+	if l.start == l.pos {
+		return nil, EInvalResp.withInfo("scanResult:empty result:" + l.input)
+	}
 	resp.result = l.input[l.start:l.pos]
+	return scanData, nil
+}
+
+func scanData(l *lexer, resp *agiResp) (scanFunc, error) {
+	// skip spaces in the begining
+	for {
+		char := l.next()
+		if char == eof {
+			return nil, nil
+		}
+		if !unicode.IsSpace(char) {
+			break
+		}
+		l.ignore()
+	}
+	for {
+		char := l.next()
+		if char == eof || char == '\n' {
+			l.backup()
+			break
+		}
+	}
+	resp.data = l.input[l.start:l.pos]
+	return nil, nil
+}
+
+func scanError(l *lexer, resp *agiResp) (scanFunc, error) {
+	resp.result = "-1"
+	if resp.code == 520 && l.peek() == '-' {
+		return scanErrorUsage, nil
+	}
+	return scanData, nil
+}
+
+func scanErrorUsage(l *lexer, resp *agiResp) (scanFunc, error) {
+	// skip hyphen
+	l.next()
+	l.ignore()
+
+	for {
+		char := l.next()
+		if char == eof || (char == '\n' && l.hasPrefix("520 End")) {
+			break
+		}
+	}
+
+	resp.data = l.input[l.start:l.pos]
 	return nil, nil
 }
 
@@ -107,7 +147,7 @@ func (l *lexer) peek() rune {
 }
 
 func (l *lexer) next() rune {
-	if l.pos > len(l.input) {
+	if l.pos >= len(l.input) {
 		l.width = 0
 		return eof
 	}
@@ -125,47 +165,7 @@ func (l *lexer) ignore() {
 	l.start = l.pos
 }
 
-/*
-
-	pos := 1
-	d := int(text[0] - '0')
-	if d > 9 {
-		return nil, EInvalResp.withInfo(":code:" + text)
-	}
-	resp.code = d
-
-	// scan response code
-	for _, ch := range []byte(text[1:]) {
-		ch -= '0'
-		if ch > 9 {
-			break
-		}
-		resp.code = resp.code*10 + int(ch)
-		pos++
-	}
-
-	if text[pos] != ' ' {
-		return nil, EInvalResp.withInfo(":code space:" + text)
-	}
-	pos++
-
-	// scan result=
-	if text[pos:pos+7] != "result=" {
-		return nil, EInvalResp.withInfo(":code space result=:" + text)
-	}
-	text = text[pos+7:]
-	pos = 0
-	for _, ch := range []byte(text[pos:]) {
-		if ch == ' ' || ch == '\n' {
-			break
-		}
-		pos++
-	}
-	resp.result = text[:pos]
-	if text[pos] != '\n' {
-		resp.data = text[pos:len(text)]
-	}
-
-	return resp, nil
+func (l *lexer) hasPrefix(pattern string) bool {
+	pos := l.pos + len(pattern)
+	return pos <= len(l.input) && l.input[l.pos:pos] == pattern
 }
-*/
