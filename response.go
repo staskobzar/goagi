@@ -14,7 +14,7 @@ type agiResp struct {
 	data   string
 }
 
-func cmdParse(text string) (*agiResp, error) {
+func parseResponse(text string) (*agiResp, error) {
 	resp := &agiResp{}
 	lex := &lexer{input: text}
 
@@ -49,7 +49,7 @@ func scanCode(l *lexer, resp *agiResp) (scanFunc, error) {
 	}
 	l.ignore()
 
-	if resp.code > 500 {
+	if resp.code >= 500 {
 		return scanError, nil
 	}
 	return scanResult, nil

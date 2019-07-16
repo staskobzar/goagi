@@ -7,7 +7,7 @@ import (
 
 func TestRespOkZero(t *testing.T) {
 	str := "200 result=0\n"
-	r, err := cmdParse(str)
+	r, err := parseResponse(str)
 	assert.Nil(t, err)
 	assert.Equal(t, 200, r.code)
 	assert.Equal(t, "0", r.result)
@@ -16,42 +16,42 @@ func TestRespOkZero(t *testing.T) {
 
 func TestRespInvalCode(t *testing.T) {
 	str := "a200 result=0\n"
-	_, err := cmdParse(str)
+	_, err := parseResponse(str)
 	assert.NotNil(t, err)
 	assert.Equal(t, err, EInvalResp)
 }
 
 func TestRespTooShort(t *testing.T) {
 	str := "200\n"
-	_, err := cmdParse(str)
+	_, err := parseResponse(str)
 	assert.NotNil(t, err)
 	assert.Equal(t, err, EInvalResp)
 }
 
 func TestRespNoSpaceAfterCode(t *testing.T) {
 	str := "200result=1\n"
-	_, err := cmdParse(str)
+	_, err := parseResponse(str)
 	assert.NotNil(t, err)
 	assert.Equal(t, err, EInvalResp)
 }
 
 func TestRespInvalidResponseResult(t *testing.T) {
 	str := "200 foo=1\n"
-	_, err := cmdParse(str)
+	_, err := parseResponse(str)
 	assert.NotNil(t, err)
 	assert.Equal(t, err, EInvalResp)
 }
 
 func TestRespResultMissing(t *testing.T) {
 	str := "200 result=\n"
-	_, err := cmdParse(str)
+	_, err := parseResponse(str)
 	assert.NotNil(t, err)
 	assert.Equal(t, err, EInvalResp)
 }
 
 func TestRespOkOne(t *testing.T) {
 	str := "200 result=1\n"
-	r, err := cmdParse(str)
+	r, err := parseResponse(str)
 	assert.Nil(t, err)
 	assert.Equal(t, 200, r.code)
 	assert.Equal(t, "1", r.result)
@@ -60,7 +60,7 @@ func TestRespOkOne(t *testing.T) {
 
 func TestRespOkMinusOne(t *testing.T) {
 	str := "200 result=-1\n"
-	r, err := cmdParse(str)
+	r, err := parseResponse(str)
 	assert.Nil(t, err)
 	assert.Equal(t, 200, r.code)
 	assert.Equal(t, "-1", r.result)
@@ -69,7 +69,7 @@ func TestRespOkMinusOne(t *testing.T) {
 
 func TestRespOkWithShortData(t *testing.T) {
 	str := "200 result=1 (timeout)\n"
-	r, err := cmdParse(str)
+	r, err := parseResponse(str)
 	assert.Nil(t, err)
 	assert.Equal(t, 200, r.code)
 	assert.Equal(t, "1", r.result)
@@ -78,7 +78,7 @@ func TestRespOkWithShortData(t *testing.T) {
 
 func TestRespOkWithLongData(t *testing.T) {
 	str := "200 result=5 (dtmf) endpos=123456\n"
-	r, err := cmdParse(str)
+	r, err := parseResponse(str)
 	assert.Nil(t, err)
 	assert.Equal(t, 200, r.code)
 	assert.Equal(t, "5", r.result)
@@ -87,7 +87,7 @@ func TestRespOkWithLongData(t *testing.T) {
 
 func TestRespError520(t *testing.T) {
 	str := "520 Invalid command syntax.  Proper usage not available.\n"
-	r, err := cmdParse(str)
+	r, err := parseResponse(str)
 	assert.Nil(t, err)
 	assert.Equal(t, 520, r.code)
 	assert.Equal(t, "-1", r.result)
@@ -104,7 +104,7 @@ func TestRespError520Long(t *testing.T) {
 		"Example return code: 200 result=1 (testvariable)\n"
 	str := "520-" + data +
 		"520 End of proper usage.\n"
-	r, err := cmdParse(str)
+	r, err := parseResponse(str)
 	assert.Nil(t, err)
 	assert.Equal(t, 520, r.code)
 	assert.Equal(t, "-1", r.result)
@@ -113,7 +113,7 @@ func TestRespError520Long(t *testing.T) {
 
 func TestRespError511(t *testing.T) {
 	str := "511 Command Not Permitted on a dead channel\n"
-	r, err := cmdParse(str)
+	r, err := parseResponse(str)
 	assert.Nil(t, err)
 	assert.Equal(t, 511, r.code)
 	assert.Equal(t, "-1", r.result)
@@ -122,9 +122,16 @@ func TestRespError511(t *testing.T) {
 
 func TestRespError510(t *testing.T) {
 	str := "510 Invalid or unknown command\n"
-	r, err := cmdParse(str)
+	r, err := parseResponse(str)
 	assert.Nil(t, err)
 	assert.Equal(t, 510, r.code)
 	assert.Equal(t, "-1", r.result)
 	assert.Equal(t, "Invalid or unknown command", r.data)
+}
+
+func BenchmarkParseAGIResponse(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		str := "200 result=1 (timeout)\n"
+		parseResponse(str)
+	}
 }
