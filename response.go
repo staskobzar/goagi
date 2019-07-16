@@ -63,7 +63,7 @@ func scanResult(l *lexer, resp *agiResp) (scanFunc, error) {
 	}
 	l.ignore()
 
-	if !l.hasPrefix(pattern) {
+	if !l.lookForward(pattern) {
 		return nil, EInvalResp.withInfo("scanResult:result= expected:" + l.input)
 	}
 	l.pos += len(pattern)
@@ -121,7 +121,7 @@ func scanErrorUsage(l *lexer, resp *agiResp) (scanFunc, error) {
 
 	for {
 		char := l.next()
-		if char == eof || (char == '\n' && l.hasPrefix("520 End")) {
+		if char == eof || (char == '\n' && l.lookForward("520 End")) {
 			break
 		}
 	}
@@ -165,7 +165,7 @@ func (l *lexer) ignore() {
 	l.start = l.pos
 }
 
-func (l *lexer) hasPrefix(pattern string) bool {
+func (l *lexer) lookForward(pattern string) bool {
 	pos := l.pos + len(pattern)
 	return pos <= len(l.input) && l.input[l.pos:pos] == pattern
 }

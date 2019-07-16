@@ -8,8 +8,10 @@ import (
 
 // AGI interface structure
 type AGI struct {
-	env map[string]string
-	arg []string
+	env    map[string]string
+	arg    []string
+	input  io.Reader
+	output io.Writer
 }
 
 var (
@@ -18,7 +20,7 @@ var (
 )
 
 func newInterface(in io.Reader, out io.Writer) (*AGI, error) {
-	agi := &AGI{make(map[string]string), make([]string, 0)}
+	agi := &AGI{make(map[string]string), make([]string, 0), in, out}
 	scanner := bufio.NewScanner(in)
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -63,4 +65,30 @@ func (agi *AGI) setEnv(line string) error {
 		agi.env[line[4:idx]] = line[idx+2 : len(line)]
 	}
 	return nil
+}
+
+func (agi *AGI) execute(cmd string) (*agiResp, error) {
+	ch := make(chan string)
+	go func() {
+		respStr := agi.read()
+		ch <- respStr
+	}()
+	agi.write(cmd + "\n")
+	respStr := <-ch
+	resp, err := parseResponse(respStr)
+	if err != nil {
+		return nil, err
+	}
+
+	return resp, nil
+}
+
+func (agi *AGI) read() string {
+	reader := bufio.NewReader(agi.in)
+	str := reader.ReadString('\n')
+	if strings.HasPrefix(str, "520-") {
+		for {
+
+		}
+	}
 }
