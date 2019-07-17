@@ -68,27 +68,49 @@ func (agi *AGI) setEnv(line string) error {
 }
 
 func (agi *AGI) execute(cmd string) (*agiResp, error) {
-	ch := make(chan string)
+	chResp := make(chan string)
+	chErr := make(chan error)
 	go func() {
-		respStr := agi.read()
-		ch <- respStr
+		defer close(chResp)
+		defer close(chErr)
+		respStr, err := agi.read()
+		if err != nil {
+			chErr <- err
+		}
+		chResp <- respStr
 	}()
-	agi.write(cmd + "\n")
-	respStr := <-ch
-	resp, err := parseResponse(respStr)
-	if err != nil {
-		return nil, err
-	}
 
-	return resp, nil
+	agi.output.Write([]byte(cmd + "\n"))
+
+	select {
+	case err := <-chErr:
+		return nil, err
+	case respStr := <-chResp:
+		resp, err := parseResponse(respStr)
+		if err != nil {
+			return nil, err
+		}
+		return resp, nil
+	}
 }
 
-func (agi *AGI) read() string {
-	reader := bufio.NewReader(agi.in)
-	str := reader.ReadString('\n')
-	if strings.HasPrefix(str, "520-") {
-		for {
-
+func (agi *AGI) read() (string, error) {
+	reader := bufio.NewReader(agi.input)
+	str, err := reader.ReadString('\n')
+	if err != nil {
+		return "", err
+	}
+	if !strings.HasPrefix(str, "520-") {
+		return str, nil
+	}
+	for {
+		s, err := reader.ReadString('\n')
+		if err != nil {
+			return "", err
 		}
+		if strings.HasPrefix(s, "520 End") {
+			return str, nil
+		}
+		str += s
 	}
 }

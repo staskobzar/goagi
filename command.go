@@ -7,6 +7,6 @@ func (agi *AGI) Answer() (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	ok := resp.code == 200 && resp.result == "0"
+	ok := resp.code == 200 && resp.result == 0
 	return ok, nil
 }

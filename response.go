@@ -5,18 +5,26 @@ import (
 	"unicode/utf8"
 )
 
-// EInvalResp error returns when AGI response does not match pattern
-var EInvalResp = errorNew("Invalid AGI response")
+var (
+	// EInvalResp error returns when AGI response does not match pattern
+	EInvalResp = errorNew("Invalid AGI response")
+	// EHangUp error when HANGUP signal received
+	EHangUp = errorNew("HANGUP")
+)
 
 type agiResp struct {
 	code   int
-	result string
+	result int
 	data   string
 }
 
 func parseResponse(text string) (*agiResp, error) {
 	resp := &agiResp{}
 	lex := &lexer{input: text}
+
+	if lex.lookForward("HANGUP\n") {
+		return nil, EHangUp
+	}
 
 	// state machine
 	for scanner, err := scanCode(lex, resp); ; scanner, err = scanner(lex, resp) {
@@ -79,7 +87,7 @@ func scanResult(l *lexer, resp *agiResp) (scanFunc, error) {
 	if l.start == l.pos {
 		return nil, EInvalResp.withInfo("scanResult:empty result:" + l.input)
 	}
-	resp.result = l.input[l.start:l.pos]
+	resp.result = l.atoi(l.start, l.pos)
 	return scanData, nil
 }
 
@@ -107,7 +115,7 @@ func scanData(l *lexer, resp *agiResp) (scanFunc, error) {
 }
 
 func scanError(l *lexer, resp *agiResp) (scanFunc, error) {
-	resp.result = "-1"
+	resp.result = -1
 	if resp.code == 520 && l.peek() == '-' {
 		return scanErrorUsage, nil
 	}
@@ -168,4 +176,22 @@ func (l *lexer) ignore() {
 func (l *lexer) lookForward(pattern string) bool {
 	pos := l.pos + len(pattern)
 	return pos <= len(l.input) && l.input[l.pos:pos] == pattern
+}
+
+func (l *lexer) atoi(start, pos int) int {
+	if start >= pos {
+		return -1
+	}
+	s := l.input[start:pos]
+	sign := 1
+	if s[0] == '-' {
+		sign = -1
+		s = s[1:]
+	}
+	n := 0
+	for _, ch := range []byte(s) {
+		ch -= '0'
+		n = n*10 + int(ch)
+	}
+	return n * sign
 }
