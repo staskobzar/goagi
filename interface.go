@@ -8,10 +8,9 @@ import (
 
 // AGI interface structure
 type AGI struct {
-	env    map[string]string
-	arg    []string
-	input  io.Reader
-	output io.Writer
+	env map[string]string
+	arg []string
+	io  io.ReadWriteCloser
 }
 
 var (
@@ -19,9 +18,9 @@ var (
 	EInvalEnv = errorNew("Invalid AGI env variable")
 )
 
-func newInterface(in io.Reader, out io.Writer) (*AGI, error) {
-	agi := &AGI{make(map[string]string), make([]string, 0), in, out}
-	scanner := bufio.NewScanner(in)
+func newInterface(iodev io.ReadWriteCloser) (*AGI, error) {
+	agi := &AGI{make(map[string]string), make([]string, 0), iodev}
+	scanner := bufio.NewScanner(iodev)
 	for scanner.Scan() {
 		line := scanner.Text()
 		if line == "" {
@@ -68,30 +67,14 @@ func (agi *AGI) setEnv(line string) error {
 }
 
 func (agi *AGI) execute(cmd string) (*agiResp, error) {
-	chResp := make(chan string)
-	chErr := make(chan error)
-	go func() {
-		defer close(chResp)
-		defer close(chErr)
-		respStr, err := agi.read()
-		if err != nil {
-			chErr <- err
-		}
-		chResp <- respStr
-	}()
 
 	agi.output.Write([]byte(cmd + "\n"))
 
-	select {
-	case err := <-chErr:
+	respStr, err := agi.read()
+	if err != nil {
 		return nil, err
-	case respStr := <-chResp:
-		resp, err := parseResponse(respStr)
-		if err != nil {
-			return nil, err
-		}
-		return resp, nil
 	}
+	return parseResponse(respStr)
 }
 
 func (agi *AGI) read() (string, error) {
@@ -108,9 +91,9 @@ func (agi *AGI) read() (string, error) {
 		if err != nil {
 			return "", err
 		}
+		str += s
 		if strings.HasPrefix(s, "520 End") {
 			return str, nil
 		}
-		str += s
 	}
 }

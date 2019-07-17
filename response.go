@@ -52,9 +52,8 @@ func scanCode(l *lexer, resp *agiResp) (scanFunc, error) {
 			l.backup()
 			break
 		}
-		char -= '0'
-		resp.code = resp.code*10 + int(char)
 	}
+	resp.code = l.atoi()
 	l.ignore()
 
 	if resp.code >= 500 {
@@ -87,7 +86,7 @@ func scanResult(l *lexer, resp *agiResp) (scanFunc, error) {
 	if l.start == l.pos {
 		return nil, EInvalResp.withInfo("scanResult:empty result:" + l.input)
 	}
-	resp.result = l.atoi(l.start, l.pos)
+	resp.result = l.atoi()
 	return scanData, nil
 }
 
@@ -178,11 +177,8 @@ func (l *lexer) lookForward(pattern string) bool {
 	return pos <= len(l.input) && l.input[l.pos:pos] == pattern
 }
 
-func (l *lexer) atoi(start, pos int) int {
-	if start >= pos {
-		return -1
-	}
-	s := l.input[start:pos]
+func (l *lexer) atoi() int {
+	s := l.input[l.start:l.pos]
 	sign := 1
 	if s[0] == '-' {
 		sign = -1

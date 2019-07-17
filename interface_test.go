@@ -122,6 +122,41 @@ func TestIFaceInitScannerError(t *testing.T) {
 	assert.Contains(t, err.Error(), "io: read/write")
 }
 
+func TestIFaceReaderOK(t *testing.T) {
+	r, w := io.Pipe()
+	agi := &AGI{input: r, output: w}
+	go func() {
+		w.Write([]byte("200 result=0\n"))
+	}()
+	str, err := agi.read()
+	assert.Nil(t, err)
+	assert.Equal(t, "200 result=0\n", str)
+}
+
+func TestIFaceReaderFail(t *testing.T) {
+	r, w := io.Pipe()
+	agi := &AGI{input: r, output: w}
+	r.Close()
+	_, err := agi.read()
+	assert.NotNil(t, err)
+	assert.Contains(t, err.Error(), "io: read/write")
+}
+
+func TestIFaceReaderMultiline(t *testing.T) {
+	input := "520-Invalid command syntax.  Proper usage follows:\n" +
+		"Usage: DATABASE GET\n" +
+		"Example return code: 200 result=1 (testvariable)\n" +
+		"520 End of proper usage.\n"
+	r, w := io.Pipe()
+	agi := &AGI{input: r, output: w}
+	go func() {
+		w.Write([]byte(input))
+	}()
+	str, err := agi.read()
+	assert.Nil(t, err)
+	assert.Contains(t, str, "520 End of proper usage.\n")
+}
+
 func BenchmarkAGInterfaceInit(b *testing.B) {
 	input := "agi_network: yes\n" +
 		"agi_network_script: foo?\n" +
