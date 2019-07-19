@@ -1,10 +1,19 @@
 package goagi
 
 import (
+	"bufio"
 	"github.com/stretchr/testify/assert"
 	"io"
+	"io/ioutil"
+	"strings"
 	"testing"
 )
+
+func dummyReadWrite(input string) *bufio.ReadWriter {
+	reader := strings.NewReader(input)
+	writer := bufio.NewWriter(ioutil.Discard)
+	return bufio.NewReadWriter(bufio.NewReader(reader), writer)
+}
 
 func TestIFaceInitSuccessful(t *testing.T) {
 	input := "agi_network: yes\n" +
@@ -34,13 +43,8 @@ func TestIFaceInitSuccessful(t *testing.T) {
 		"agi_arg_3: 3\n" +
 		"\n"
 
-	r, w := io.Pipe()
-	go func(in string) {
-		w.Write([]byte(in))
-	}(input)
-
-	agi, err := newInterface(r, w)
-	w.Close()
+	rw := dummyReadWrite(input)
+	agi, err := newInterface(rw)
 
 	assert.Nil(t, err)
 	assert.Equal(t, agi.Env("network"), "yes")
@@ -78,13 +82,9 @@ func TestIFaceInitInvalidEnvName(t *testing.T) {
 		"not_agi_env: bar\n" +
 		"agi_language: en\n" +
 		"\n"
-	r, w := io.Pipe()
-	go func(in string) {
-		w.Write([]byte(in))
-	}(input)
 
-	_, err := newInterface(r, w)
-	w.Close()
+	rw := dummyReadWrite(input)
+	_, err := newInterface(rw)
 	assert.NotNil(t, err)
 	assert.Equal(t, err, EInvalEnv)
 	assert.Contains(t, err.Error(), "not_agi_env")
@@ -96,13 +96,10 @@ func TestIFaceInitInvalidHeader(t *testing.T) {
 		"agi_env_no_delim bar\n" +
 		"agi_language: en\n" +
 		"\n"
-	r, w := io.Pipe()
-	go func(in string) {
-		w.Write([]byte(in))
-	}(input)
 
-	_, err := newInterface(r, w)
-	w.Close()
+	rw := dummyReadWrite(input)
+	_, err := newInterface(rw)
+
 	assert.NotNil(t, err)
 	assert.Equal(t, err, EInvalEnv)
 	assert.Contains(t, err.Error(), "agi_env_no_delim")
@@ -112,22 +109,23 @@ func TestIFaceInitScannerError(t *testing.T) {
 	input := "agi_network: yes\n" +
 		"agi_network_script: foo?\n" +
 		"agi_language: en\n"
+
 	r, w := io.Pipe()
 	go func(in string) {
 		w.Write([]byte(in))
 	}(input)
 	r.Close()
-	_, err := newInterface(r, w)
+
+	rw := bufio.NewReadWriter(bufio.NewReader(r), bufio.NewWriter(w))
+	_, err := newInterface(rw)
+
 	assert.NotNil(t, err)
 	assert.Contains(t, err.Error(), "io: read/write")
 }
 
 func TestIFaceReaderOK(t *testing.T) {
-	r, w := io.Pipe()
-	agi := &AGI{input: r, output: w}
-	go func() {
-		w.Write([]byte("200 result=0\n"))
-	}()
+	rw := dummyReadWrite("200 result=0\n")
+	agi := &AGI{io: rw}
 	str, err := agi.read()
 	assert.Nil(t, err)
 	assert.Equal(t, "200 result=0\n", str)
@@ -135,7 +133,8 @@ func TestIFaceReaderOK(t *testing.T) {
 
 func TestIFaceReaderFail(t *testing.T) {
 	r, w := io.Pipe()
-	agi := &AGI{input: r, output: w}
+	rw := bufio.NewReadWriter(bufio.NewReader(r), bufio.NewWriter(w))
+	agi := &AGI{io: rw}
 	r.Close()
 	_, err := agi.read()
 	assert.NotNil(t, err)
@@ -147,11 +146,8 @@ func TestIFaceReaderMultiline(t *testing.T) {
 		"Usage: DATABASE GET\n" +
 		"Example return code: 200 result=1 (testvariable)\n" +
 		"520 End of proper usage.\n"
-	r, w := io.Pipe()
-	agi := &AGI{input: r, output: w}
-	go func() {
-		w.Write([]byte(input))
-	}()
+	rw := dummyReadWrite(input)
+	agi := &AGI{io: rw}
 	str, err := agi.read()
 	assert.Nil(t, err)
 	assert.Contains(t, str, "520 End of proper usage.\n")
@@ -186,14 +182,8 @@ func BenchmarkAGInterfaceInit(b *testing.B) {
 		"\n"
 
 	for i := 0; i < b.N; i++ {
-		r, w := io.Pipe()
-		go func(in string) {
-			w.Write([]byte(in))
-		}(input)
-
-		agi, _ := newInterface(r, w)
-		w.Close()
-		r.Close()
+		rw := dummyReadWrite(input)
+		agi, _ := newInterface(rw)
 		agi.Env("network")
 	}
 }

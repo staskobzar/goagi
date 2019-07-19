@@ -2,7 +2,6 @@ package goagi
 
 import (
 	"bufio"
-	"io"
 	"strings"
 )
 
@@ -10,7 +9,7 @@ import (
 type AGI struct {
 	env map[string]string
 	arg []string
-	io  io.ReadWriteCloser
+	io  *bufio.ReadWriter
 }
 
 var (
@@ -18,7 +17,7 @@ var (
 	EInvalEnv = errorNew("Invalid AGI env variable")
 )
 
-func newInterface(iodev io.ReadWriteCloser) (*AGI, error) {
+func newInterface(iodev *bufio.ReadWriter) (*AGI, error) {
 	agi := &AGI{make(map[string]string), make([]string, 0), iodev}
 	scanner := bufio.NewScanner(iodev)
 	for scanner.Scan() {
@@ -68,7 +67,7 @@ func (agi *AGI) setEnv(line string) error {
 
 func (agi *AGI) execute(cmd string) (*agiResp, error) {
 
-	agi.output.Write([]byte(cmd + "\n"))
+	agi.io.Write([]byte(cmd + "\n"))
 
 	respStr, err := agi.read()
 	if err != nil {
@@ -78,8 +77,7 @@ func (agi *AGI) execute(cmd string) (*agiResp, error) {
 }
 
 func (agi *AGI) read() (string, error) {
-	reader := bufio.NewReader(agi.input)
-	str, err := reader.ReadString('\n')
+	str, err := agi.io.ReadString('\n')
 	if err != nil {
 		return "", err
 	}
@@ -87,7 +85,7 @@ func (agi *AGI) read() (string, error) {
 		return str, nil
 	}
 	for {
-		s, err := reader.ReadString('\n')
+		s, err := agi.io.ReadString('\n')
 		if err != nil {
 			return "", err
 		}
