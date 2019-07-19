@@ -136,7 +136,8 @@ func TestIFaceReaderFail(t *testing.T) {
 	rw := bufio.NewReadWriter(bufio.NewReader(r), bufio.NewWriter(w))
 	agi := &AGI{io: rw}
 	r.Close()
-	_, err := agi.read()
+	_, cerr := agi.read()
+	err := <-cerr
 	assert.NotNil(t, err)
 	assert.Contains(t, err.Error(), "io: read/write")
 }

@@ -2,8 +2,12 @@ package goagi
 
 import (
 	"bufio"
+	"context"
 	"strings"
+	"time"
 )
+
+const execTimeoutSec = 2
 
 // AGI interface structure
 type AGI struct {
@@ -67,31 +71,52 @@ func (agi *AGI) setEnv(line string) error {
 
 func (agi *AGI) execute(cmd string) (*agiResp, error) {
 
-	agi.io.Write([]byte(cmd + "\n"))
-
-	respStr, err := agi.read()
+	_, err := agi.io.Write([]byte(cmd + "\n"))
 	if err != nil {
 		return nil, err
 	}
-	return parseResponse(respStr)
+
+	ctx, cancel := context.WithTimeout(context.Background(), execTimeoutSec*time.Second)
+	chStr, chErr := agi.read()
+	select {
+	case <-ctx.Done():
+		cancel()
+		return nil, errorNew("execute: Read timeout")
+	case str := <-chStr:
+		return parseResponse(str)
+	case err := <-chErr:
+		return nil, err
+	}
 }
 
-func (agi *AGI) read() (string, error) {
-	str, err := agi.io.ReadString('\n')
-	if err != nil {
-		return "", err
-	}
-	if !strings.HasPrefix(str, "520-") {
-		return str, nil
-	}
-	for {
-		s, err := agi.io.ReadString('\n')
+func (agi *AGI) read() (chan string, chan error) {
+	chStr := make(chan string)
+	chErr := make(chan error)
+	go func() {
+		defer close(chStr)
+		defer close(chErr)
+
+		str, err := agi.io.ReadString('\n')
 		if err != nil {
-			return "", err
+			chErr <- err
+			return
 		}
-		str += s
-		if strings.HasPrefix(s, "520 End") {
-			return str, nil
+		if !strings.HasPrefix(str, "520-") {
+			chStr <- str
+			return
 		}
-	}
+		for {
+			s, err := agi.io.ReadString('\n')
+			if err != nil {
+				chErr <- err
+				return
+			}
+			str += s
+			if strings.HasPrefix(s, "520 End") {
+				chStr <- str
+				return
+			}
+		}
+	}()
+	return chStr, chErr
 }
