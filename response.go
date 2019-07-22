@@ -182,6 +182,37 @@ func (l *lexer) lookForward(pattern string) bool {
 	return pos <= len(l.input) && l.input[l.pos:pos] == pattern
 }
 
+func (l *lexer) extractResposeValue() string {
+	if l.pos == len(l.input) {
+		return ""
+	}
+	if l.input[l.pos:l.pos+1] != "(" {
+		return ""
+	}
+	l.pos++
+
+	return l.input[l.pos : len(l.input)-1]
+}
+
+func (l *lexer) extractEndpos() int32 {
+	pattern := "endpos="
+	if !l.lookForward(pattern) {
+		return -1
+	}
+	l.pos += len(pattern)
+	l.start = l.pos
+	for {
+		if chr := l.peek(); unicode.IsSpace(chr) || chr == eof {
+			break
+		}
+		l.next()
+	}
+	if l.start == l.pos {
+		return -1
+	}
+	return l.atoi()
+}
+
 func (l *lexer) atoi() int32 {
 	s := l.input[l.start:l.pos]
 	sign := 1

@@ -60,8 +60,14 @@ func (agi *AGI) ChannelStatus(channel string) (int, error) {
 //	agi.ControlStreamFile("prompt_en", "19", "3000", "#", "0", "#", "1600")
 //	agi.ControlStreamFile("prompt_en", "")
 //	agi.ControlStreamFile("prompt_en", "19", "", "", "", "#", "1600")
-func (agi *AGI) ControlStreamFile(filename, digits string, args ...string) (int32, error) {
-	resp, err := agi.execute("CONTROL STREAM FILE", filename, digits, args)
+func (agi *AGI) ControlStreamFile(filename, digits string, args ...interface{}) (int32, error) {
+	cmd := "CONTROL STREAM FILE " + filename
+	if len(digits) > 0 {
+		cmd += " " + digits
+	} else {
+		cmd += " \"\""
+	}
+	resp, err := agi.execute(cmd, args...)
 	if err != nil {
 		return 0, err
 	}
@@ -142,7 +148,8 @@ func (agi *AGI) Exec(app, opts string) (int, error) {
 
 // GetData Stream the given file, and receive DTMF data.
 func (agi *AGI) GetData(file string, args ...interface{}) (digits int, timeout bool, err error) {
-	resp, err := agi.execute("GET DATA", file, args)
+	cmd := "GET DATA " + file
+	resp, err := agi.execute(cmd, args...)
 	if err != nil {
 		return -1, false, err
 	}
@@ -152,4 +159,104 @@ func (agi *AGI) GetData(file string, args ...interface{}) (digits int, timeout b
 	timeout = len(resp.data) > 8 && resp.data[0:9] == "(timeout)"
 	digits = int(resp.result)
 	return
+}
+
+// GetFullVariable evaluates a channel expression
+func (agi *AGI) GetFullVariable(name string, channel ...string) (string, error) {
+	cmd := "GET FULL VARIABLE " + name
+	var resp *agiResp
+	var err error
+	if len(channel) > 0 {
+		resp, err = agi.execute(cmd, channel[0])
+	} else {
+		resp, err = agi.execute(cmd)
+	}
+	if err != nil {
+		return "", err
+	}
+	if resp.result == 0 {
+		return "", errorNew("Variable is not set.")
+	}
+
+	l := &lexer{input: resp.data}
+	return l.extractResposeValue(), nil
+}
+
+// GetOption Stream file, prompt for DTMF, with timeout.
+//	Behaves similar to STREAM FILE but used with a timeout option.
+//	Returns digit pressed, offset and error
+func (agi *AGI) GetOption(filename, digits string, timeout int32) (int, int32, error) {
+	cmd := "GET OPTION " + filename
+	resp, err := agi.execute(cmd, digits, timeout)
+	if err != nil {
+		return -1, 0, err
+	}
+	l := &lexer{input: resp.data}
+	endpos := l.extractEndpos()
+
+	if resp.result == -1 {
+		return -1, 0, errorNew("Command failure")
+	}
+
+	if resp.result == 0 && endpos == 0 {
+		return -1, 0, errorNew("Failure on open")
+	}
+
+	return int(resp.result), endpos, nil
+}
+
+// GetVariable Gets a channel variable.
+func (agi *AGI) GetVariable(name string) (string, error) {
+	resp, err := agi.execute("GET VARIABLE", name)
+	if err != nil {
+		return "", err
+	}
+	if resp.result == 0 {
+		return "", errorNew("Variable is not set.")
+	}
+
+	l := &lexer{input: resp.data}
+	return l.extractResposeValue(), nil
+}
+
+// Hangup a channel.
+//	Hangs up the specified channel. If no channel name is given, hangs up the current channel
+func (agi *AGI) Hangup(channel ...string) (bool, error) {
+	cmd := "HANGUP"
+	if len(channel) > 0 {
+		cmd += " " + channel[0]
+	}
+	resp, err := agi.execute(cmd)
+	if err != nil {
+		return false, err
+	}
+	if resp.result == -1 {
+		return false, errorNew("Failed hangup")
+	}
+	return true, nil
+}
+
+// Noop Does nothing.
+func (agi *AGI) Noop() error {
+	_, err := agi.execute("NOOP")
+	return err
+}
+
+// ReceiveChar Receives one character from channels supporting it.
+//	Most channels do not support the reception of text. Returns the decimal value of
+// the character if one is received, or 0 if the channel does not support text reception.
+//	timeout - The maximum time to wait for input in milliseconds, or 0 for infinite. Most channels
+//	Returns -1 only on error/hangup.
+func (agi *AGI) ReceiveChar(timeout int32) (int, error) {
+	resp, err := agi.execute("RECEIVE CHAR", timeout)
+	if err != nil {
+		return -1, err
+	}
+	if resp.result == -1 {
+		return -1, errorNew("Channel error or hangup.")
+	}
+	if resp.result == 0 {
+		return -1, errorNew("Channel does not support text reception.")
+	}
+	return int(resp.result), nil
 }

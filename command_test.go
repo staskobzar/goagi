@@ -279,3 +279,185 @@ func TestCmdGetDataFail(t *testing.T) {
 	assert.Equal(t, -1, res)
 	assert.False(t, tout)
 }
+
+// command GetFullVariable
+func TestCmdGetFullVariableOk(t *testing.T) {
+	resp := "200 result=1 (\"John Dow\" <12345>)\n"
+	rw := dummyReadWrite(resp)
+	agi := &AGI{io: rw}
+	val, err := agi.GetFullVariable("CALLERID")
+	assert.Nil(t, err)
+	assert.Equal(t, "\"John Dow\" <12345>", val)
+
+	resp = "200 result=1 (107.5.2.224)\n"
+	rw = dummyReadWrite(resp)
+	agi = &AGI{io: rw}
+	val, err = agi.GetFullVariable("CHANNEL(rtp,dest)", "SIP/112003430-44432")
+	assert.Nil(t, err)
+	assert.Equal(t, "107.5.2.224", val)
+}
+
+func TestCmdGetFullVariableFail(t *testing.T) {
+	resp := "200 result=0\n"
+	rw := dummyReadWrite(resp)
+	agi := &AGI{io: rw}
+	val, err := agi.GetFullVariable("CALLERID(null)")
+	assert.NotNil(t, err)
+	assert.Equal(t, "", val)
+
+	rw = dummyReadWriteWError()
+	agi = &AGI{io: rw}
+	_, err = agi.GetFullVariable("CALLERID(null)")
+	assert.NotNil(t, err)
+}
+
+// command GetOption
+func TestCmdGetOptionOk(t *testing.T) {
+	resp := "200 result=0 endpos=10245\n"
+	rw := dummyReadWrite(resp)
+	agi := &AGI{io: rw}
+	dig, offset, err := agi.GetOption("welcome_prompt", "", 0)
+	assert.Nil(t, err)
+	assert.Equal(t, 0, dig)
+	assert.EqualValues(t, 10245, offset)
+
+	resp = "200 result=5 endpos=52417854\n"
+	rw = dummyReadWrite(resp)
+	agi = &AGI{io: rw}
+	dig, offset, err = agi.GetOption("welcome_prompt", "12", 1800)
+	assert.Nil(t, err)
+	assert.Equal(t, 5, dig)
+	assert.EqualValues(t, 52417854, offset)
+}
+
+func TestCmdGetOptionFail(t *testing.T) {
+	resp := "200 result=-1 endpos=0\n"
+	rw := dummyReadWrite(resp)
+	agi := &AGI{io: rw}
+	dig, offset, err := agi.GetOption("welcome_prompt", "12", 0)
+	assert.NotNil(t, err)
+	assert.Equal(t, -1, dig)
+	assert.EqualValues(t, 0, offset)
+
+	resp = "200 result=0 endpos=0\n"
+	rw = dummyReadWrite(resp)
+	agi = &AGI{io: rw}
+	dig, offset, err = agi.GetOption("welcome_prompt", "12", 0)
+	assert.NotNil(t, err)
+	assert.Equal(t, -1, dig)
+	assert.EqualValues(t, 0, offset)
+
+	rw = dummyReadWriteWError()
+	agi = &AGI{io: rw}
+	dig, offset, err = agi.GetOption("welcome_prompt", "12", 0)
+	assert.NotNil(t, err)
+	assert.Equal(t, -1, dig)
+	assert.EqualValues(t, 0, offset)
+}
+
+// command GetVariable
+func TestCmdGetVariableOk(t *testing.T) {
+	resp := "200 result=1 (\"John Dow\" <12345>)\n"
+	rw := dummyReadWrite(resp)
+	agi := &AGI{io: rw}
+	val, err := agi.GetVariable("CALLERID")
+	assert.Nil(t, err)
+	assert.Equal(t, "\"John Dow\" <12345>", val)
+
+	resp = "200 result=1 (107.5.2.224)\n"
+	rw = dummyReadWrite(resp)
+	agi = &AGI{io: rw}
+	val, err = agi.GetVariable("CHANNEL(rtp,dest)")
+	assert.Nil(t, err)
+	assert.Equal(t, "107.5.2.224", val)
+}
+
+func TestCmdGetVariableFail(t *testing.T) {
+	resp := "200 result=0\n"
+	rw := dummyReadWrite(resp)
+	agi := &AGI{io: rw}
+	val, err := agi.GetVariable("CALLERID(null)")
+	assert.NotNil(t, err)
+	assert.Equal(t, "", val)
+
+	rw = dummyReadWriteWError()
+	agi = &AGI{io: rw}
+	_, err = agi.GetVariable("CALLERID(null)")
+	assert.NotNil(t, err)
+}
+
+// command Hangup
+func TestCmdHangupOk(t *testing.T) {
+	resp := "200 result=1\n"
+	rw := dummyReadWrite(resp)
+	agi := &AGI{io: rw}
+	ok, err := agi.Hangup()
+	assert.Nil(t, err)
+	assert.True(t, ok)
+}
+
+func TestCmdHangupFail(t *testing.T) {
+	resp := "200 result=-1\n"
+	rw := dummyReadWrite(resp)
+	agi := &AGI{io: rw}
+	ok, err := agi.Hangup("SIP/0001-4578")
+	assert.NotNil(t, err)
+	assert.False(t, ok)
+
+	rw = dummyReadWriteWError()
+	agi = &AGI{io: rw}
+	ok, err = agi.Hangup("SIP/0001-4578")
+	assert.NotNil(t, err)
+	assert.False(t, ok)
+}
+
+// command Noop
+func TestCmdNoopOk(t *testing.T) {
+	resp := "200 result=0\n"
+	rw := dummyReadWrite(resp)
+	agi := &AGI{io: rw}
+	err := agi.Noop()
+	assert.Nil(t, err)
+}
+
+func TestCmdNoopFail(t *testing.T) {
+	rw := dummyReadWriteWError()
+	agi := &AGI{io: rw}
+	err := agi.Noop()
+	assert.NotNil(t, err)
+}
+
+// command ReceiveChar
+func TestCmdReceiveCharOk(t *testing.T) {
+	rw := dummyReadWrite("200 result=5 (timeout)\n")
+	agi := &AGI{io: rw}
+	chr, err := agi.ReceiveChar(0)
+	assert.Nil(t, err)
+	assert.Equal(t, 5, chr)
+
+	rw = dummyReadWrite("200 result=9\n")
+	agi = &AGI{io: rw}
+	chr, err = agi.ReceiveChar(500)
+	assert.Nil(t, err)
+	assert.Equal(t, 9, chr)
+}
+
+func TestCmdReceiveCharFail(t *testing.T) {
+	rw := dummyReadWrite("200 result=-1 (hangup)\n")
+	agi := &AGI{io: rw}
+	chr, err := agi.ReceiveChar(1000)
+	assert.NotNil(t, err)
+	assert.Equal(t, -1, chr)
+
+	rw = dummyReadWrite("200 result=0\n")
+	agi = &AGI{io: rw}
+	chr, err = agi.ReceiveChar(1000)
+	assert.NotNil(t, err)
+	assert.Equal(t, -1, chr)
+
+	rw = dummyReadWriteWError()
+	agi = &AGI{io: rw}
+	chr, err = agi.ReceiveChar(1000)
+	assert.NotNil(t, err)
+	assert.Equal(t, -1, chr)
+}

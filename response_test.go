@@ -136,6 +136,28 @@ func TestRespHangup(t *testing.T) {
 	assert.Equal(t, err, EHangUp)
 }
 
+func TestRespExtractValue(t *testing.T) {
+	l := &lexer{input: "(var value)"}
+	assert.Equal(t, "var value", l.extractResposeValue())
+	l = &lexer{input: ""}
+	assert.Equal(t, "", l.extractResposeValue())
+	l = &lexer{input: "something wrong"}
+	assert.Equal(t, "", l.extractResposeValue())
+	l = &lexer{input: "(12454785415.001)"}
+	assert.Equal(t, "12454785415.001", l.extractResposeValue())
+}
+
+func TestRespExtractEndpos(t *testing.T) {
+	l := &lexer{input: "endpos=54568"}
+	assert.EqualValues(t, 54568, l.extractEndpos())
+	l = &lexer{input: "foo"}
+	assert.EqualValues(t, -1, l.extractEndpos())
+	l = &lexer{input: "endpos=0"}
+	assert.EqualValues(t, 0, l.extractEndpos())
+	l = &lexer{input: "endpos="}
+	assert.EqualValues(t, -1, l.extractEndpos())
+}
+
 func BenchmarkParseAGIResponse(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		str := "200 result=1 (timeout)\n"
