@@ -15,6 +15,32 @@ func dummyReadWrite(input string) *bufio.ReadWriter {
 	return bufio.NewReadWriter(bufio.NewReader(reader), writer)
 }
 
+func dummyReadWriteWError() *bufio.ReadWriter {
+	r, w := io.Pipe()
+	w.Close()
+	return bufio.NewReadWriter(bufio.NewReader(r), bufio.NewWriter(w))
+}
+
+func dummyReadWriteRError() *bufio.ReadWriter {
+	r, w := io.Pipe()
+	r.Close()
+	return bufio.NewReadWriter(bufio.NewReader(r), bufio.NewWriter(w))
+}
+
+func TestIFaceCommandCompile(t *testing.T) {
+	resp := compileCmd("ANSWER")
+	assert.Equal(t, "ANSWER\n", string(resp))
+	resp = compileCmd("CHANNEL STATUS", "SIP/00007-1234")
+	assert.Equal(t, "CHANNEL STATUS SIP/00007-1234\n", string(resp))
+	resp = compileCmd("CHANNEL STATUS", "")
+	assert.Equal(t, "CHANNEL STATUS \"\"\n", string(resp))
+	resp = compileCmd("CONTROL STREAM FILE", "welcome", "", 3000, 9, "#", "", 1600)
+	assert.Equal(t, "CONTROL STREAM FILE welcome \"\" 3000 9 # \"\" 1600\n",
+		string(resp))
+	resp = compileCmd("DATABASE DEL", "user", `"alice"`)
+	assert.Equal(t, "DATABASE DEL user \"alice\"\n", string(resp))
+}
+
 func TestIFaceInitSuccessful(t *testing.T) {
 	input := "agi_network: yes\n" +
 		"agi_network_script: foo?\n" +
@@ -106,17 +132,7 @@ func TestIFaceInitInvalidHeader(t *testing.T) {
 }
 
 func TestIFaceInitScannerError(t *testing.T) {
-	input := "agi_network: yes\n" +
-		"agi_network_script: foo?\n" +
-		"agi_language: en\n"
-
-	r, w := io.Pipe()
-	go func(in string) {
-		w.Write([]byte(in))
-	}(input)
-	r.Close()
-
-	rw := bufio.NewReadWriter(bufio.NewReader(r), bufio.NewWriter(w))
+	rw := dummyReadWriteRError()
 	_, err := newInterface(rw)
 
 	assert.NotNil(t, err)
@@ -126,16 +142,15 @@ func TestIFaceInitScannerError(t *testing.T) {
 func TestIFaceReaderOK(t *testing.T) {
 	rw := dummyReadWrite("200 result=0\n")
 	agi := &AGI{io: rw}
-	str, err := agi.read()
-	assert.Nil(t, err)
+	chstr, err := agi.read()
+	str := <-chstr
+	assert.Nil(t, <-err)
 	assert.Equal(t, "200 result=0\n", str)
 }
 
 func TestIFaceReaderFail(t *testing.T) {
-	r, w := io.Pipe()
-	rw := bufio.NewReadWriter(bufio.NewReader(r), bufio.NewWriter(w))
+	rw := dummyReadWriteRError()
 	agi := &AGI{io: rw}
-	r.Close()
 	_, cerr := agi.read()
 	err := <-cerr
 	assert.NotNil(t, err)
@@ -149,9 +164,36 @@ func TestIFaceReaderMultiline(t *testing.T) {
 		"520 End of proper usage.\n"
 	rw := dummyReadWrite(input)
 	agi := &AGI{io: rw}
-	str, err := agi.read()
-	assert.Nil(t, err)
+	chstr, err := agi.read()
+	str := <-chstr
+	assert.Nil(t, <-err)
 	assert.Contains(t, str, "520 End of proper usage.\n")
+}
+
+func TestIFaceExecute(t *testing.T) {
+	rw := dummyReadWrite("200 result=-1 (dtmf)\n")
+	agi := &AGI{io: rw}
+	resp, err := agi.execute("ANSWER\n")
+	assert.Nil(t, err)
+	assert.Equal(t, 200, resp.code)
+	assert.EqualValues(t, -1, resp.result)
+	assert.Equal(t, "(dtmf)", resp.data)
+}
+
+func TestIFaceExecuteFailWrite(t *testing.T) {
+	rw := dummyReadWriteWError()
+	agi := &AGI{io: rw}
+	resp, err := agi.execute("CHANNEL STATUS\n")
+	assert.NotNil(t, err)
+	assert.Nil(t, resp)
+}
+
+func BenchmarkIFaceExecute(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		rw := dummyReadWrite("200 result=0 (timeout)\n")
+		agi := &AGI{io: rw}
+		agi.execute("ANSWER\n")
+	}
 }
 
 func BenchmarkAGInterfaceInit(b *testing.B) {

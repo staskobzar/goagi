@@ -14,8 +14,12 @@ var (
 
 type agiResp struct {
 	code   int
-	result int
+	result int32
 	data   string
+}
+
+func (resp *agiResp) isOk() bool {
+	return resp.code == 200 && resp.result == 0
 }
 
 func parseResponse(text string) (*agiResp, error) {
@@ -53,7 +57,7 @@ func scanCode(l *lexer, resp *agiResp) (scanFunc, error) {
 			break
 		}
 	}
-	resp.code = l.atoi()
+	resp.code = int(l.atoi())
 	l.ignore()
 
 	if resp.code >= 500 {
@@ -84,9 +88,10 @@ func scanResult(l *lexer, resp *agiResp) (scanFunc, error) {
 		}
 	}
 	if l.start == l.pos {
-		return nil, EInvalResp.withInfo("scanResult:empty result:" + l.input)
+		resp.result = -3
+	} else {
+		resp.result = l.atoi()
 	}
-	resp.result = l.atoi()
 	return scanData, nil
 }
 
@@ -177,7 +182,7 @@ func (l *lexer) lookForward(pattern string) bool {
 	return pos <= len(l.input) && l.input[l.pos:pos] == pattern
 }
 
-func (l *lexer) atoi() int {
+func (l *lexer) atoi() int32 {
 	s := l.input[l.start:l.pos]
 	sign := 1
 	if s[0] == '-' {
@@ -189,5 +194,5 @@ func (l *lexer) atoi() int {
 		ch -= '0'
 		n = n*10 + int(ch)
 	}
-	return n * sign
+	return int32(n * sign)
 }

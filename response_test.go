@@ -10,7 +10,7 @@ func TestRespOkZero(t *testing.T) {
 	r, err := parseResponse(str)
 	assert.Nil(t, err)
 	assert.Equal(t, 200, r.code)
-	assert.Equal(t, 0, r.result)
+	assert.EqualValues(t, 0, r.result)
 	assert.Equal(t, "", r.data)
 }
 
@@ -44,9 +44,9 @@ func TestRespInvalidResponseResult(t *testing.T) {
 
 func TestRespResultMissing(t *testing.T) {
 	str := "200 result=\n"
-	_, err := parseResponse(str)
-	assert.NotNil(t, err)
-	assert.Equal(t, err, EInvalResp)
+	r, err := parseResponse(str)
+	assert.Nil(t, err)
+	assert.EqualValues(t, -3, r.result)
 }
 
 func TestRespOkOne(t *testing.T) {
@@ -54,7 +54,7 @@ func TestRespOkOne(t *testing.T) {
 	r, err := parseResponse(str)
 	assert.Nil(t, err)
 	assert.Equal(t, 200, r.code)
-	assert.Equal(t, 1, r.result)
+	assert.EqualValues(t, 1, r.result)
 	assert.Equal(t, "", r.data)
 }
 
@@ -63,7 +63,7 @@ func TestRespOkMinusOne(t *testing.T) {
 	r, err := parseResponse(str)
 	assert.Nil(t, err)
 	assert.Equal(t, 200, r.code)
-	assert.Equal(t, -1, r.result)
+	assert.EqualValues(t, -1, r.result)
 	assert.Equal(t, "", r.data)
 }
 
@@ -72,7 +72,7 @@ func TestRespOkWithShortData(t *testing.T) {
 	r, err := parseResponse(str)
 	assert.Nil(t, err)
 	assert.Equal(t, 200, r.code)
-	assert.Equal(t, 1, r.result)
+	assert.EqualValues(t, 1, r.result)
 	assert.Equal(t, "(timeout)", r.data)
 }
 
@@ -81,7 +81,7 @@ func TestRespOkWithLongData(t *testing.T) {
 	r, err := parseResponse(str)
 	assert.Nil(t, err)
 	assert.Equal(t, 200, r.code)
-	assert.Equal(t, 5, r.result)
+	assert.EqualValues(t, 5, r.result)
 	assert.Equal(t, "(dtmf) endpos=123456", r.data)
 }
 
@@ -90,7 +90,7 @@ func TestRespError520(t *testing.T) {
 	r, err := parseResponse(str)
 	assert.Nil(t, err)
 	assert.Equal(t, 520, r.code)
-	assert.Equal(t, -1, r.result)
+	assert.EqualValues(t, -1, r.result)
 	assert.Equal(t, "Invalid command syntax.  Proper usage not available.", r.data)
 }
 
@@ -107,7 +107,7 @@ func TestRespError520Long(t *testing.T) {
 	r, err := parseResponse(str)
 	assert.Nil(t, err)
 	assert.Equal(t, 520, r.code)
-	assert.Equal(t, -1, r.result)
+	assert.EqualValues(t, -1, r.result)
 	assert.Equal(t, data, r.data)
 }
 
@@ -116,7 +116,7 @@ func TestRespError511(t *testing.T) {
 	r, err := parseResponse(str)
 	assert.Nil(t, err)
 	assert.Equal(t, 511, r.code)
-	assert.Equal(t, -1, r.result)
+	assert.EqualValues(t, -1, r.result)
 	assert.Equal(t, "Command Not Permitted on a dead channel", r.data)
 }
 
@@ -125,7 +125,7 @@ func TestRespError510(t *testing.T) {
 	r, err := parseResponse(str)
 	assert.Nil(t, err)
 	assert.Equal(t, 510, r.code)
-	assert.Equal(t, -1, r.result)
+	assert.EqualValues(t, -1, r.result)
 	assert.Equal(t, "Invalid or unknown command", r.data)
 }
 

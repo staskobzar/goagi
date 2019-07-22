@@ -2,9 +2,8 @@ package goagi
 
 import (
 	"bufio"
-	"context"
+	"fmt"
 	"strings"
-	"time"
 )
 
 const execTimeoutSec = 2
@@ -69,19 +68,15 @@ func (agi *AGI) setEnv(line string) error {
 	return nil
 }
 
-func (agi *AGI) execute(cmd string) (*agiResp, error) {
+func (agi *AGI) execute(cmd string, args ...interface{}) (*agiResp, error) {
 
-	_, err := agi.io.Write([]byte(cmd + "\n"))
+	_, err := agi.io.Write(compileCmd(cmd, args...))
 	if err != nil {
 		return nil, err
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), execTimeoutSec*time.Second)
 	chStr, chErr := agi.read()
 	select {
-	case <-ctx.Done():
-		cancel()
-		return nil, errorNew("execute: Read timeout")
 	case str := <-chStr:
 		return parseResponse(str)
 	case err := <-chErr:
@@ -119,4 +114,18 @@ func (agi *AGI) read() (chan string, chan error) {
 		}
 	}()
 	return chStr, chErr
+}
+
+func compileCmd(cmd string, args ...interface{}) []byte {
+	cmd = fmt.Sprintf("%s", cmd)
+	for _, arg := range args {
+		val := fmt.Sprintf("%v", arg)
+		if len(val) > 0 {
+			cmd = fmt.Sprintf("%s %s", cmd, val)
+		} else {
+			cmd = fmt.Sprintf("%s \"\"", cmd)
+		}
+	}
+	cmd = fmt.Sprintf("%s\n", cmd)
+	return []byte(cmd)
 }
