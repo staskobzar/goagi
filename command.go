@@ -364,3 +364,176 @@ func (agi *AGI) SayPhonetic(str, escDigits string) error {
 func (agi *AGI) SayTime(time, escDigits string) error {
 	return agi.say("TIME", time, escDigits)
 }
+
+// SendImage Sends the given image on a channel. Most channels do not support
+// the transmission of images.
+func (agi *AGI) SendImage(image string) error {
+	resp, err := agi.execute("SEND IMAGE", image)
+	if err != nil {
+		return err
+	}
+	if resp.result < 0 {
+		return errorNew("Failure or hangup.")
+	}
+	return nil
+}
+
+// SendText Sends the given text on a channel. Most channels do not support
+// the transmission of text.
+func (agi *AGI) SendText(text string) error {
+	text = fmt.Sprintf("\"%s\"", text)
+	resp, err := agi.execute("SEND TEXT", text)
+	if err != nil {
+		return err
+	}
+	if resp.result < 0 {
+		return errorNew("Failure or hangup.")
+	}
+	return nil
+}
+
+// SetAutoHangup Cause the channel to automatically hangup at time seconds in the future.
+// Setting to 0 will cause the autohangup feature to be disabled on this channel.
+func (agi *AGI) SetAutoHangup(seconds int) error {
+	resp, err := agi.execute("SET AUTOHANGUP", seconds)
+	if err != nil {
+		return err
+	}
+	if resp.result != 0 {
+		return errorNew("Failure or hangup.")
+	}
+	return nil
+}
+
+// SetCallerid Changes the callerid of the current channel.
+func (agi *AGI) SetCallerid(clid string) error {
+	resp, err := agi.execute("SET CALLERID", clid)
+	if err != nil {
+		return err
+	}
+	if resp.result != 1 {
+		return errorNew("Failure or hangup.")
+	}
+	return nil
+}
+
+// SetContext Sets the context for continuation upon exiting the application.
+func (agi *AGI) SetContext(ctx string) error {
+	resp, err := agi.execute("SET CONTEXT", ctx)
+	if err != nil {
+		return err
+	}
+	if resp.result != 0 {
+		return errorNew("Failure or hangup.")
+	}
+	return nil
+}
+
+// SetExtension Changes the extension for continuation upon exiting the application.
+func (agi *AGI) SetExtension(ext string) error {
+	resp, err := agi.execute("SET EXTENSION", ext)
+	if err != nil {
+		return err
+	}
+	if resp.result != 0 {
+		return errorNew("Failure or hangup.")
+	}
+	return nil
+}
+
+// SetMusic Enables/Disables the music on hold generator. If class is not specified,
+// then the default music on hold class will be used.
+//	Parameters: opt is "on" or "off", and music class as string
+func (agi *AGI) SetMusic(opt string, class ...string) error {
+	if opt != "on" && opt != "off" {
+		return errorNew("Invalid opt: '" + opt + "'. Must be 'on' or 'off'.")
+	}
+
+	if class != nil {
+		opt = fmt.Sprintf("%s %s", opt, class[0])
+	}
+
+	resp, err := agi.execute("SET MUSIC", opt)
+	if err != nil {
+		return err
+	}
+	if resp.result != 0 {
+		return errorNew("Failure or hangup.")
+	}
+	return nil
+}
+
+// SetPriority Changes the priority for continuation upon exiting the application.
+// The priority must be a valid priority or label.
+func (agi *AGI) SetPriority(priority string) error {
+	resp, err := agi.execute("SET PRIORITY", priority)
+	if err != nil {
+		return err
+	}
+	if resp.result != 0 {
+		return errorNew("Failure or hangup.")
+	}
+	return nil
+}
+
+// SetVariable Sets a variable to the current channel.
+func (agi *AGI) SetVariable(name, value string) error {
+	value = fmt.Sprintf("\"%s\"", value)
+	resp, err := agi.execute("SET VARIABLE", name, value)
+	if err != nil {
+		return err
+	}
+	if resp.result != 1 {
+		return errorNew("Failure or hangup.")
+	}
+	return nil
+}
+
+// StreamFile Send the given file, allowing playback to be interrupted by the given
+// digits, if any.
+func (agi *AGI) StreamFile(file, escDigits string, offset int) (int, error) {
+	resp, err := agi.execute("STREAM FILE", file, escDigits, offset)
+	if err != nil {
+		return -1, err
+	}
+	if resp.result == -1 {
+		return -1, errorNew("Failure or hangup.")
+	}
+	return int(resp.result), nil
+}
+
+// TDDMode Enable/Disable TDD transmission/reception on a channel.
+//	Modes: on, off, mate, tdd
+func (agi *AGI) TDDMode(mode string) error {
+	resp, err := agi.execute("TDD MODE", mode)
+	if err != nil {
+		return err
+	}
+	if resp.result != 1 {
+		return errorNew("Failure or hangup.")
+	}
+	return nil
+}
+
+// Verbose Sends message to the console via verbose message system.
+// level is the verbose level (1-4)
+func (agi *AGI) Verbose(msg string, level ...int) error {
+	var err error
+	if level == nil {
+		_, err = agi.execute("VERBOSE", msg)
+	} else {
+		_, err = agi.execute("VERBOSE", msg, level)
+	}
+	return err
+}
+
+// WaitForDigit Waits up to timeout milliseconds for channel to receive a DTMF digit.
+// Use -1 for the timeout value if you desire the call to block indefinitely.
+//	Return digit pressed as string or error
+func (agi *AGI) WaitForDigit(timeout int) (string, error) {
+	resp, err := agi.execute("WAIT FOR DIGIT", timeout)
+	if err != nil {
+		return "", err
+	}
+	return string(resp.result), nil
+}

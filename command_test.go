@@ -572,3 +572,250 @@ func TestCmdSayTimeOk(t *testing.T) {
 	err := agi.SayTime("1563844046", "9")
 	assert.Nil(t, err)
 }
+
+// command SendImage
+func TestCmdSendImageOk(t *testing.T) {
+	rw := dummyReadWrite("200 result=0\n")
+	agi := &AGI{io: rw}
+	err := agi.SendImage("image_file")
+	assert.Nil(t, err)
+}
+
+func TestCmdSendImageFail(t *testing.T) {
+	rw := dummyReadWrite("200 result=-1\n")
+	agi := &AGI{io: rw}
+	err := agi.SendImage("image_file")
+	assert.NotNil(t, err)
+
+	rw = dummyReadWriteWError()
+	agi = &AGI{io: rw}
+	err = agi.SendImage("image_file")
+	assert.NotNil(t, err)
+}
+
+// command SendText
+func TestCmdSendTextOk(t *testing.T) {
+	rw := dummyReadWrite("200 result=0\n")
+	agi := &AGI{io: rw}
+	err := agi.SendText("Hello there, friend!")
+	assert.Nil(t, err)
+}
+
+func TestCmdSendTextFail(t *testing.T) {
+	rw := dummyReadWrite("200 result=-1\n")
+	agi := &AGI{io: rw}
+	err := agi.SendText("Hello there, friend!")
+	assert.NotNil(t, err)
+
+	rw = dummyReadWriteWError()
+	agi = &AGI{io: rw}
+	err = agi.SendText("Hello there, friend!")
+	assert.NotNil(t, err)
+}
+
+// command SetAutoHangup
+func TestCmdSetAutoHangupOk(t *testing.T) {
+	rw := dummyReadWrite("200 result=0\n")
+	agi := &AGI{io: rw}
+	err := agi.SetAutoHangup(0)
+	assert.Nil(t, err)
+}
+
+func TestCmdSetAutoHangupFail(t *testing.T) {
+	rw := dummyReadWrite("200 result=-1\n")
+	agi := &AGI{io: rw}
+	err := agi.SetAutoHangup(1800)
+	assert.NotNil(t, err)
+
+	rw = dummyReadWriteWError()
+	agi = &AGI{io: rw}
+	err = agi.SetAutoHangup(800)
+	assert.NotNil(t, err)
+}
+
+// command SetCallerid
+func TestCmdSetCalleridOk(t *testing.T) {
+	rw := dummyReadWrite("200 result=1\n")
+	agi := &AGI{io: rw}
+	err := agi.SetCallerid("\"Achlie\" <5544>")
+	assert.Nil(t, err)
+}
+
+func TestCmdSetCalleridFail(t *testing.T) {
+	rw := dummyReadWrite("200 result=-1\n")
+	agi := &AGI{io: rw}
+	err := agi.SetCallerid("5552452211")
+	assert.NotNil(t, err)
+
+	rw = dummyReadWriteWError()
+	agi = &AGI{io: rw}
+	err = agi.SetCallerid("5552452211")
+	assert.NotNil(t, err)
+}
+
+// command SetContext
+func TestCmdSetContextOk(t *testing.T) {
+	rw := dummyReadWrite("200 result=0\n")
+	agi := &AGI{io: rw}
+	err := agi.SetContext("default-inbound")
+	assert.Nil(t, err)
+}
+
+func TestCmdSetContextFail(t *testing.T) {
+	rw := dummyReadWrite("200 result=-1\n")
+	agi := &AGI{io: rw}
+	err := agi.SetContext("default-inbound")
+	assert.NotNil(t, err)
+
+	rw = dummyReadWriteWError()
+	agi = &AGI{io: rw}
+	err = agi.SetContext("default-inbound")
+	assert.NotNil(t, err)
+}
+
+// command SetExtension
+func TestCmdSetExtensionOk(t *testing.T) {
+	rw := dummyReadWrite("200 result=0\n")
+	agi := &AGI{io: rw}
+	err := agi.SetExtension("55588")
+	assert.Nil(t, err)
+}
+
+func TestCmdSetExtensionFail(t *testing.T) {
+	rw := dummyReadWrite("200 result=-1\n")
+	agi := &AGI{io: rw}
+	err := agi.SetExtension("s")
+	assert.NotNil(t, err)
+
+	rw = dummyReadWriteWError()
+	agi = &AGI{io: rw}
+	err = agi.SetExtension("VOICEMAIL")
+	assert.NotNil(t, err)
+}
+
+// command SetMusic
+func TestCmdSetMusicOk(t *testing.T) {
+	rw := dummyReadWrite("200 result=0\n")
+	agi := &AGI{io: rw}
+	err := agi.SetMusic("on", "hip-pop")
+	assert.Nil(t, err)
+}
+
+func TestCmdSetMusicFail(t *testing.T) {
+	rw := dummyReadWrite("200 result=-1\n")
+	agi := &AGI{io: rw}
+	err := agi.SetMusic("off")
+	assert.NotNil(t, err)
+
+	agi = &AGI{io: rw}
+	err = agi.SetMusic("foo", "bar")
+	assert.NotNil(t, err)
+
+	rw = dummyReadWriteWError()
+	agi = &AGI{io: rw}
+	err = agi.SetMusic("on")
+	assert.NotNil(t, err)
+}
+
+// command SetPriority
+func TestCmdSetPriorityOk(t *testing.T) {
+	rw := dummyReadWrite("200 result=0\n")
+	agi := &AGI{io: rw}
+	err := agi.SetPriority("1")
+	assert.Nil(t, err)
+}
+
+func TestCmdSetPriorityFail(t *testing.T) {
+	rw := dummyReadWrite("200 result=-1\n")
+	agi := &AGI{io: rw}
+	err := agi.SetPriority("label")
+	assert.NotNil(t, err)
+
+	rw = dummyReadWriteWError()
+	agi = &AGI{io: rw}
+	err = agi.SetPriority("12")
+	assert.NotNil(t, err)
+}
+
+// command SetVariable
+func TestCmdSetVariableOk(t *testing.T) {
+	rw := dummyReadWrite("200 result=1\n")
+	agi := &AGI{io: rw}
+	err := agi.SetVariable("FOO", "1234")
+	assert.Nil(t, err)
+}
+
+func TestCmdSetVariableFail(t *testing.T) {
+	rw := dummyReadWrite("200 result=-1\n")
+	agi := &AGI{io: rw}
+	err := agi.SetVariable("MOH", "hello")
+	assert.NotNil(t, err)
+
+	rw = dummyReadWriteWError()
+	agi = &AGI{io: rw}
+	err = agi.SetVariable("CALLERID(num)", "5558876541")
+	assert.NotNil(t, err)
+}
+
+// command StreamFile
+func TestCmdStreamFileOk(t *testing.T) {
+	rw := dummyReadWrite("200 result=48 endpos=123654\n")
+	agi := &AGI{io: rw}
+	r, err := agi.StreamFile("prompt.en", "0", 0)
+	assert.Nil(t, err)
+	assert.Equal(t, 48, r)
+}
+
+func TestCmdStreamFileFail(t *testing.T) {
+	rw := dummyReadWrite("200 result=-1 endpos=1235\n")
+	agi := &AGI{io: rw}
+	r, err := agi.StreamFile("prompt.en", "", 1000)
+	assert.NotNil(t, err)
+	assert.Equal(t, -1, r)
+
+	rw = dummyReadWriteWError()
+	agi = &AGI{io: rw}
+	r, err = agi.StreamFile("prompt.en", "123", 200)
+	assert.NotNil(t, err)
+	assert.Equal(t, -1, r)
+}
+
+// command TDDMode
+func TestCmdTDDModeOk(t *testing.T) {
+	rw := dummyReadWrite("200 result=1\n")
+	agi := &AGI{io: rw}
+	err := agi.TDDMode("on")
+	assert.Nil(t, err)
+}
+
+func TestCmdTDDModeFail(t *testing.T) {
+	rw := dummyReadWrite("200 result=-1\n")
+	agi := &AGI{io: rw}
+	err := agi.TDDMode("mate")
+	assert.NotNil(t, err)
+
+	rw = dummyReadWriteWError()
+	agi = &AGI{io: rw}
+	err = agi.TDDMode("off")
+	assert.NotNil(t, err)
+}
+
+// command Verbose
+func TestCmdVerboseOk(t *testing.T) {
+	rw := dummyReadWrite("200 result=1\n")
+	agi := &AGI{io: rw}
+	err := agi.Verbose("Hello World!")
+	assert.Nil(t, err)
+
+	rw = dummyReadWrite("200 result=1\n")
+	agi = &AGI{io: rw}
+	err = agi.Verbose("Hello World!", 4)
+	assert.Nil(t, err)
+}
+
+func TestCmdVerboseFail(t *testing.T) {
+	rw := dummyReadWriteWError()
+	agi := &AGI{io: rw}
+	err := agi.Verbose("gonna fail")
+	assert.NotNil(t, err)
+}
