@@ -5,6 +5,28 @@ import (
 	"testing"
 )
 
+// command Command
+func TestCmdCommandOk(t *testing.T) {
+	resp := "200 result=25 endpos=542268\n"
+	rw := dummyReadWrite(resp)
+	agi := &AGI{io: rw}
+	code, result, respStr, err := agi.Command("STREAM FILE welcome 09# \"554\"")
+	assert.Nil(t, err)
+	assert.Equal(t, 200, code)
+	assert.Equal(t, 25, result)
+	assert.Equal(t, "endpos=542268", respStr)
+}
+
+func TestCmdCommandFail(t *testing.T) {
+	rw := dummyReadWriteWError()
+	agi := &AGI{io: rw}
+	code, result, respStr, err := agi.Command("STREAM FILE welcome 09# \"554\"")
+	assert.NotNil(t, err)
+	assert.Equal(t, -1, code)
+	assert.Equal(t, -1, result)
+	assert.Equal(t, "", respStr)
+}
+
 // command Answer
 func TestCmdAnswerOk(t *testing.T) {
 	resp := "200 result=0\n"
@@ -818,4 +840,39 @@ func TestCmdVerboseFail(t *testing.T) {
 	agi := &AGI{io: rw}
 	err := agi.Verbose("gonna fail")
 	assert.NotNil(t, err)
+}
+
+// command WaitForDigit
+func TestCmdWaitForDigitOk(t *testing.T) {
+	rw := dummyReadWrite("200 result=0\n")
+	agi := &AGI{io: rw}
+	dig, err := agi.WaitForDigit(-1)
+	assert.Nil(t, err)
+	assert.Equal(t, "", dig)
+
+	rw = dummyReadWrite("200 result=48\n")
+	agi = &AGI{io: rw}
+	dig, err = agi.WaitForDigit(1000)
+	assert.Nil(t, err)
+	assert.Equal(t, "0", dig)
+
+	rw = dummyReadWrite("200 result=42\n")
+	agi = &AGI{io: rw}
+	dig, err = agi.WaitForDigit(2000)
+	assert.Nil(t, err)
+	assert.Equal(t, "*", dig)
+}
+
+func TestCmdWaitForDigitFail(t *testing.T) {
+	rw := dummyReadWrite("200 result=-1\n")
+	agi := &AGI{io: rw}
+	dig, err := agi.WaitForDigit(-1)
+	assert.NotNil(t, err)
+	assert.Equal(t, "", dig)
+
+	rw = dummyReadWriteWError()
+	agi = &AGI{io: rw}
+	dig, err = agi.WaitForDigit(-1)
+	assert.NotNil(t, err)
+	assert.Equal(t, "", dig)
 }

@@ -4,6 +4,16 @@ import (
 	"fmt"
 )
 
+// Command sends command as string to the AGI and returns response valus with
+// text response
+func (agi *AGI) Command(cmd string) (code int, result int, data string, err error) {
+	resp, err := agi.execute(cmd)
+	if err != nil {
+		return -1, -1, "", err
+	}
+	return resp.code, int(resp.result), resp.data, nil
+}
+
 // Answer executes AGI command "ANSWER"
 // Answers channel if not already in answer state.
 func (agi *AGI) Answer() (bool, error) {
@@ -527,13 +537,19 @@ func (agi *AGI) Verbose(msg string, level ...int) error {
 	return err
 }
 
-// WaitForDigit Waits up to timeout milliseconds for channel to receive a DTMF digit.
+// WaitForDigit Waits up to timeout *milliseconds* for channel to receive a DTMF digit.
 // Use -1 for the timeout value if you desire the call to block indefinitely.
 //	Return digit pressed as string or error
 func (agi *AGI) WaitForDigit(timeout int) (string, error) {
 	resp, err := agi.execute("WAIT FOR DIGIT", timeout)
 	if err != nil {
 		return "", err
+	}
+	if resp.result == -1 {
+		return "", errorNew("Failed run command")
+	}
+	if resp.result == 0 {
+		return "", nil
 	}
 	return string(resp.result), nil
 }
