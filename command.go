@@ -1,5 +1,9 @@
 package goagi
 
+import (
+	"fmt"
+)
+
 // Answer executes AGI command "ANSWER"
 // Answers channel if not already in answer state.
 func (agi *AGI) Answer() (bool, error) {
@@ -259,4 +263,104 @@ func (agi *AGI) ReceiveChar(timeout int32) (int, error) {
 		return -1, errorNew("Channel does not support text reception.")
 	}
 	return int(resp.result), nil
+}
+
+// ReceiveText Receives text from channels supporting it.
+//	timeout - The timeout to be the maximum time to wait for input in milliseconds, or 0 for infinite.
+func (agi *AGI) ReceiveText(timeout int32) (string, error) {
+	resp, err := agi.execute("RECEIVE TEXT", timeout)
+	if err != nil {
+		return "", err
+	}
+	if resp.result == -1 {
+		return "", errorNew("Failure, hangup or timeout.")
+	}
+	l := &lexer{input: resp.data}
+	return l.extractResposeValue(), nil
+}
+
+// RecordFile Record to a file until a given dtmf digit in the sequence is received.
+// The format will specify what kind of file will be recorded. The timeout is the
+// maximum record time in milliseconds, or -1 for no timeout.
+//	offset samples is optional, and, if provided, will seek to the offset without
+// exceeding the end of the file.
+//	beep causes Asterisk to play a beep to the channel that is about to be recorded.
+//	silence is the number of seconds of silence allowed before the function returns
+// despite the lack of dtmf digits or reaching timeout.
+//	silence is the number of seconds of silence that are permitted before the
+// recording is terminated, regardless of the escape_digits or timeout arguments
+func (agi *AGI) RecordFile(file, format, escDigits string,
+	timeout, offset int,
+	beep bool,
+	silence int) error {
+	// RECORD FILE FILENAME FORMAT ESCAPE_DIGITS TIMEOUT OFFSET_SAMPLES BEEP S=SILENCE
+	cmd := "RECORD FILE"
+	cmd = fmt.Sprintf("%s %s %s %s", cmd, file, format, escDigits)
+	if beep {
+		cmd = fmt.Sprintf("%s BEEP", cmd)
+	}
+	if silence > 0 {
+		cmd = fmt.Sprintf("%s s=%d", cmd, silence)
+	}
+	resp, err := agi.execute(cmd)
+	if err != nil {
+		return err
+	}
+	if resp.result <= 0 {
+		return errorNew("Failed record file")
+	}
+	return nil
+}
+
+func (agi *AGI) say(cmd string, args ...interface{}) error {
+	resp, err := agi.execute("SAY "+cmd, args...)
+	if err != nil {
+		return err
+	}
+	if resp.result < 0 {
+		return errorNew("Failure")
+	}
+	return nil
+}
+
+// SayAlpha says a given character string, returning early if any of the given
+// DTMF digits are received on the channel.
+func (agi *AGI) SayAlpha(number, escDigits string) error {
+	return agi.say("ALPHA", number, escDigits)
+}
+
+// SayDate say a given date, returning early if any of the given DTMF digits
+// are received on the channel
+func (agi *AGI) SayDate(date, escDigits string) error {
+	return agi.say("DATE", date, escDigits)
+}
+
+// SayDatetime say a given time, returning early if any of the given DTMF
+// digits are received on the channel
+func (agi *AGI) SayDatetime(time, escDigits, format, timezone string) error {
+	return agi.say("DATETIME", time, escDigits, format, timezone)
+}
+
+// SayDigits say a given digit string, returning early if any of the given
+// DTMF digits are received on the channel
+func (agi *AGI) SayDigits(number, escDigits string) error {
+	return agi.say("DIGITS", number, escDigits)
+}
+
+// SayNumber say a given digit string, returning early if any of the given
+// DTMF digits are received on the channel
+func (agi *AGI) SayNumber(number, escDigits string) error {
+	return agi.say("NUMBER", number, escDigits)
+}
+
+// SayPhonetic say a given character string with phonetics, returning early
+// if any of the given DTMF digits are received on the channel
+func (agi *AGI) SayPhonetic(str, escDigits string) error {
+	return agi.say("PHONETIC", str, escDigits)
+}
+
+// SayTime say a given time, returning early if any of the given DTMF digits
+// are received on the channel
+func (agi *AGI) SayTime(time, escDigits string) error {
+	return agi.say("TIME", time, escDigits)
 }

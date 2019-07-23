@@ -461,3 +461,114 @@ func TestCmdReceiveCharFail(t *testing.T) {
 	assert.NotNil(t, err)
 	assert.Equal(t, -1, chr)
 }
+
+// command ReceiveText
+func TestCmdReceiveTextOk(t *testing.T) {
+	rw := dummyReadWrite("200 result=1 (White fox is lost in the sea)\n")
+	agi := &AGI{io: rw}
+	text, err := agi.ReceiveText(0)
+	assert.Nil(t, err)
+	assert.Equal(t, "White fox is lost in the sea", text)
+}
+
+func TestCmdReceiveTextFail(t *testing.T) {
+	rw := dummyReadWrite("200 result=-1\n")
+	agi := &AGI{io: rw}
+	text, err := agi.ReceiveText(1000)
+	assert.NotNil(t, err)
+	assert.Equal(t, "", text)
+
+	rw = dummyReadWriteWError()
+	agi = &AGI{io: rw}
+	text, err = agi.ReceiveText(1000)
+	assert.NotNil(t, err)
+	assert.Equal(t, "", text)
+}
+
+// command RecordFile
+func TestCmdRecordFileOk(t *testing.T) {
+	rw := dummyReadWrite("200 result=48 (dtmf) endpos=554879\n")
+	agi := &AGI{io: rw}
+	err := agi.RecordFile("new_rec", "wav", "029", -1, 0, false, 0)
+	assert.Nil(t, err)
+}
+
+func TestCmdRecordFileFail(t *testing.T) {
+	rw := dummyReadWrite("200 result=-1 (hangup) endpos=554879\n")
+	agi := &AGI{io: rw}
+	err := agi.RecordFile("new_rec", "wav", "09", 1000, 1800, true, 500)
+	assert.NotNil(t, err)
+
+	rw = dummyReadWriteWError()
+	agi = &AGI{io: rw}
+	err = agi.RecordFile("new_rec", "wav", "09", 1000, 1800, true, 500)
+	assert.NotNil(t, err)
+}
+
+// command SayAlpha
+func TestCmdSayAlphaOk(t *testing.T) {
+	rw := dummyReadWrite("200 result=48\n")
+	agi := &AGI{io: rw}
+	err := agi.SayAlpha("abc", "10")
+	assert.Nil(t, err)
+}
+
+func TestCmdSayAlphaFail(t *testing.T) {
+	rw := dummyReadWrite("200 result=-1\n")
+	agi := &AGI{io: rw}
+	err := agi.SayAlpha("abc", "10")
+	assert.NotNil(t, err)
+
+	rw = dummyReadWriteWError()
+	agi = &AGI{io: rw}
+	err = agi.SayAlpha("abc", "10")
+	assert.NotNil(t, err)
+}
+
+// command SayDate
+func TestCmdSayDateOk(t *testing.T) {
+	rw := dummyReadWrite("200 result=0\n")
+	agi := &AGI{io: rw}
+	err := agi.SayDate("1563844045", "0")
+	assert.Nil(t, err)
+}
+
+// command SayDatetime
+func TestCmdSayDatetimeOk(t *testing.T) {
+	rw := dummyReadWrite("200 result=0\n")
+	agi := &AGI{io: rw}
+	err := agi.SayDatetime("1563844045", "9", "", "")
+	assert.Nil(t, err)
+}
+
+// command SayDigits
+func TestCmdSayDigitsOk(t *testing.T) {
+	rw := dummyReadWrite("200 result=0\n")
+	agi := &AGI{io: rw}
+	err := agi.SayDigits("4045", "9")
+	assert.Nil(t, err)
+}
+
+// command SayNumber
+func TestCmdSayNumberOk(t *testing.T) {
+	rw := dummyReadWrite("200 result=0\n")
+	agi := &AGI{io: rw}
+	err := agi.SayNumber("4045", "9")
+	assert.Nil(t, err)
+}
+
+// command SayPhonetic
+func TestCmdSayPhoneticOk(t *testing.T) {
+	rw := dummyReadWrite("200 result=0\n")
+	agi := &AGI{io: rw}
+	err := agi.SayPhonetic("abcd", "9")
+	assert.Nil(t, err)
+}
+
+// command SayTime
+func TestCmdSayTimeOk(t *testing.T) {
+	rw := dummyReadWrite("200 result=0\n")
+	agi := &AGI{io: rw}
+	err := agi.SayTime("1563844046", "9")
+	assert.Nil(t, err)
+}
