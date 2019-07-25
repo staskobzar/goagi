@@ -1,5 +1,11 @@
 # goagi: Golang library to build agi/fastagi applications
 
+[![beta](https://img.shields.io/badge/v1-BETA-orange)(https://github.com/staskobzar/goagi)]
+[![Build Status](https://travis-ci.org/staskobzar/goagi.svg?branch=master)](https://travis-ci.org/staskobzar/goagi)
+[![codecov](https://codecov.io/gh/staskobzar/goagi/branch/master/graph/badge.svg)](https://codecov.io/gh/staskobzar/goagi)
+
+
+
 Simple library that helps to build AGI sctipts or FastAGI servers with Go.
 ```go
 import "github.com/staskobzar/goagi"
@@ -101,17 +107,17 @@ func NewAGI() (*AGI, error)
 ```go
 func (agi *AGI) Answer() (bool, error)
 ```
-    Answer executes AGI command "ANSWER" Answers channel if not already in
-    answer state.
+>    Answer executes AGI command "ANSWER" Answers channel if not already in
+>    answer state.
 
 ```go
 func (agi *AGI) AsyncAGIBreak() (bool, error)
 ```
-    AsyncAGIBreak Interrupts Async AGI
-
-    Interrupts expected flow of Async AGI commands and returns control
-
-    to previous source (typically, the PBX dialplan).
+>    AsyncAGIBreak Interrupts Async AGI
+>
+>    Interrupts expected flow of Async AGI commands and returns control
+>
+>    to previous source (typically, the PBX dialplan).
 
 ```go
 func (agi *AGI) ChannelStatus(channel string) (int, error)
@@ -135,241 +141,271 @@ func (agi *AGI) ChannelStatus(channel string) (int, error)
 ```go
 func (agi *AGI) Command(cmd string) (code int, result int, respStr string, err error)
 ```
-    Command sends command as string to the AGI and returns response valus with
-    text response
+>    Command sends command as string to the AGI and returns response valus with
+>    text response
 
 ```go
 func (agi *AGI) ControlStreamFile(filename, digits string, args ...interface{}) (int32, error)
 ```
-    ControlStreamFile sends audio file on channel and allows the listener to
-    control the stream.
-
-    Send the given file, allowing playback to be controlled by the given digits, if any.
-
-    Use double quotes for the digits if you wish none to be permitted. If
-    offsetms is provided then the audio will seek to offsetms before play
-    starts.
-
-    Returns 0 if playback completes without a digit being pressed, or the ASCII numerical
-
-    value of the digit if one was pressed, or -1 on error or if the channel was
-    disconnected.
-
-    Returns the position where playback was terminated as endpos.
-    Example:
-    agi.ControlStreamFile("prompt_en", "19", "3000", "#", "0", "#", "1600")
-    agi.ControlStreamFile("prompt_en", "")
-    agi.ControlStreamFile("prompt_en", "19", "", "", "", "#", "1600")
+>    ControlStreamFile sends audio file on channel and allows the listener to
+>    control the stream.
+>
+>    Send the given file, allowing playback to be controlled by the given digits, if any.
+>
+>    Use double quotes for the digits if you wish none to be permitted. If
+>    offsetms is provided then the audio will seek to offsetms before play
+>    starts.
+>
+>    Returns 0 if playback completes without a digit being pressed, or the ASCII numerical
+>
+>    value of the digit if one was pressed, or -1 on error or if the channel was
+>    disconnected.
+>
+>    Returns the position where playback was terminated as endpos.
+>    Example:
+>    agi.ControlStreamFile("prompt_en", "19", "3000", "#", "0", "#", "1600")
+>    agi.ControlStreamFile("prompt_en", "")
+>    agi.ControlStreamFile("prompt_en", "19", "", "", "", "#", "1600")
 
 ```go
 func (agi *AGI) DatabaseDel(family, key string) (bool, error)
 ```
-    DatabaseDel deletes an entry in the Asterisk database for a given family and
-    key.
-
-    Returns status and error if fails.
+>    DatabaseDel deletes an entry in the Asterisk database for a given family and
+>    key.
+>
+>    Returns status and error if fails.
 
 ```go
 func (agi *AGI) DatabaseDelTree(family, keytree string) (bool, error)
 ```
-    DatabaseDelTree deletes a family or specific keytree within a family in the
-    Asterisk database.
+>    DatabaseDelTree deletes a family or specific keytree within a family in the
+>    Asterisk database.
 
 ```go
 func (agi *AGI) DatabaseGet(family, key string) (string, error)
 ```
-    DatabaseGet Retrieves an entry in the Asterisk database for a given family
-    and key.
-
-    Returns value as string or error if failed or value not set
+>    DatabaseGet Retrieves an entry in the Asterisk database for a given family
+>    and key.
+>
+>    Returns value as string or error if failed or value not set
 
 ```go
 func (agi *AGI) DatabasePut(family, key, val string) (bool, error)
 ```
-    DatabasePut adds or updates an entry in the Asterisk database for a given
-    family, key, and value.
+>    DatabasePut adds or updates an entry in the Asterisk database for a given
+>    family, key, and value.
 
 ```go
 func (agi *AGI) Env(key string) string
 ```
-    Env returns AGI environment variable by key
+>    Env returns AGI environment variable by key
 
 ```go
 func (agi *AGI) EnvArgs() []string
 ```
-    EnvArgs returns list of environment arguments
+>    EnvArgs returns list of environment arguments
 
 ```go
 func (agi *AGI) Exec(app, opts string) (int, error)
 ```
-    Exec executes application with given options.
+>    Exec executes application with given options.
 
 ```go
 func (agi *AGI) GetData(file string, args ...interface{}) (digit string, timeout bool, err error)
 ```
-    GetData Stream the given file, and receive DTMF data.
+>    GetData Stream the given file, and receive DTMF data.
 
 ```go
 func (agi *AGI) GetFullVariable(name string, channel ...string) (string, error)
 ```
-    GetFullVariable evaluates a channel expression
+>    GetFullVariable evaluates a channel expression
 
 ```go
 func (agi *AGI) GetOption(filename, digits string, timeout int32) (int, int32, error)
 ```
-    GetOption Stream file, prompt for DTMF, with timeout.
-
-    Behaves similar to STREAM FILE but used with a timeout option.
-    Returns digit pressed, offset and error
+>    GetOption Stream file, prompt for DTMF, with timeout.
+>
+>    Behaves similar to STREAM FILE but used with a timeout option.
+>    Returns digit pressed, offset and error
 
 ```go
 func (agi *AGI) GetVariable(name string) (string, error)
 ```
-    GetVariable Gets a channel variable.
+>    GetVariable Gets a channel variable.
 
 ```go
 func (agi *AGI) Hangup(channel ...string) (bool, error)
 ```
-    Hangup a channel.
-
-    Hangs up the specified channel. If no channel name is given, hangs up the current channel
+>    Hangup a channel.
+>
+>    Hangs up the specified channel. If no channel name is given, hangs up the current channel
 
 ```go
 func (agi *AGI) Noop() error
 ```
-    Noop Does nothing.
+>    Noop Does nothing.
 
 ```go
 func (agi *AGI) ReceiveChar(timeout int32) (int, error)
 ```
-    ReceiveChar Receives one character from channels supporting it.
-
-    Most channels do not support the reception of text. Returns the decimal value of
-
-    the character if one is received, or 0 if the channel does not support text
-    reception.
-
-    timeout - The maximum time to wait for input in milliseconds, or 0 for infinite. Most channels
-    Returns -1 only on error/hangup.
+>    ReceiveChar Receives one character from channels supporting it.
+>
+>    Most channels do not support the reception of text. Returns the decimal value of
+>
+>    the character if one is received, or 0 if the channel does not support text
+>    reception.
+>
+>    timeout - The maximum time to wait for input in milliseconds, or 0 for infinite. Most channels
+>    Returns -1 only on error/hangup.
 
 ```go
 func (agi *AGI) ReceiveText(timeout int32) (string, error)
 ```
-    ReceiveText Receives text from channels supporting it.
-
-    timeout - The timeout to be the maximum time to wait for input in milliseconds, or 0 for infinite.
+>    ReceiveText Receives text from channels supporting it.
+>
+>    timeout - The timeout to be the maximum time to wait for input in milliseconds, or 0 for infinite.
 
 ```go
 func (agi *AGI) RecordFile(file, format, escDigits string,
-```
 	timeout, offset int, beep bool, silence int) error
-    RecordFile Record to a file until a given dtmf digit in the sequence is
-    received. The format will specify what kind of file will be recorded. The
-    timeout is the maximum record time in milliseconds, or -1 for no timeout.
-
-    offset samples is optional, and, if provided, will seek to the offset without
-
-    exceeding the end of the file.
-
-    beep causes Asterisk to play a beep to the channel that is about to be recorded.
-    silence is the number of seconds of silence allowed before the function returns
-
-    despite the lack of dtmf digits or reaching timeout.
-
-    silence is the number of seconds of silence that are permitted before the
-
-    recording is terminated, regardless of the escape_digits or timeout
-    arguments
+```
+>    RecordFile Record to a file until a given dtmf digit in the sequence is
+>    received. The format will specify what kind of file will be recorded. The
+>    timeout is the maximum record time in milliseconds, or -1 for no timeout.
+>
+>    offset samples is optional, and, if provided, will seek to the offset without exceeding the end of the file.
+>
+>    beep causes Asterisk to play a beep to the channel that is about to be recorded.
+>    silence is the number of seconds of silence allowed before the function returns
+>
+>    despite the lack of dtmf digits or reaching timeout.
+>
+>    silence is the number of seconds of silence that are permitted before the
+>
+>    recording is terminated, regardless of the escape_digits or timeout
+>    arguments
 
 ```go
 func (agi *AGI) SayAlpha(number, escDigits string) error
 ```
-    SayAlpha says a given character string, returning early if any of the given
-    DTMF digits are received on the channel.
+>    SayAlpha says a given character string, returning early if any of the given
+>    DTMF digits are received on the channel.
 
 ```go
 func (agi *AGI) SayDate(date, escDigits string) error
 ```
-    SayDate say a given date, returning early if any of the given DTMF digits
-    are received on the channel
+>    SayDate say a given date, returning early if any of the given DTMF digits
+>    are received on the channel
 
 ```go
 func (agi *AGI) SayDatetime(time, escDigits, format, timezone string) error
 ```
-    SayDatetime say a given time, returning early if any of the given DTMF
-    digits are received on the channel
+>    SayDatetime say a given time, returning early if any of the given DTMF
+>    digits are received on the channel
 
 ```go
 func (agi *AGI) SayDigits(number, escDigits string) error
 ```
-    SayDigits say a given digit string, returning early if any of the given DTMF
-    digits are received on the channel
+>    SayDigits say a given digit string, returning early if any of the given DTMF
+>    digits are received on the channel
 
+```go
 func (agi *AGI) SayNumber(number, escDigits string) error
-    SayNumber say a given digit string, returning early if any of the given DTMF
-    digits are received on the channel
+```
+>    SayNumber say a given digit string, returning early if any of the given DTMF
+>    digits are received on the channel
 
+```go
 func (agi *AGI) SayPhonetic(str, escDigits string) error
-    SayPhonetic say a given character string with phonetics, returning early if
-    any of the given DTMF digits are received on the channel
+```
+>    SayPhonetic say a given character string with phonetics, returning early if
+>    any of the given DTMF digits are received on the channel
 
+```go
 func (agi *AGI) SayTime(time, escDigits string) error
-    SayTime say a given time, returning early if any of the given DTMF digits
-    are received on the channel
+```
+>    SayTime say a given time, returning early if any of the given DTMF digits
+>    are received on the channel
 
+```go
 func (agi *AGI) SendImage(image string) error
-    SendImage Sends the given image on a channel. Most channels do not support
-    the transmission of images.
+```
+>    SendImage Sends the given image on a channel. Most channels do not support
+>    the transmission of images.
 
+```go
 func (agi *AGI) SendText(text string) error
-    SendText Sends the given text on a channel. Most channels do not support the
-    transmission of text.
+```
+>    SendText Sends the given text on a channel. Most channels do not support the
+>    transmission of text.
 
+```go
 func (agi *AGI) SetAutoHangup(seconds int) error
-    SetAutoHangup Cause the channel to automatically hangup at time seconds in
-    the future. Setting to 0 will cause the autohangup feature to be disabled on
-    this channel.
+```
+>    SetAutoHangup Cause the channel to automatically hangup at time seconds in
+>    the future. Setting to 0 will cause the autohangup feature to be disabled on
+>    this channel.
 
+```go
 func (agi *AGI) SetCallerid(clid string) error
-    SetCallerid Changes the callerid of the current channel.
+```
+>    SetCallerid Changes the callerid of the current channel.
 
+```go
 func (agi *AGI) SetContext(ctx string) error
-    SetContext Sets the context for continuation upon exiting the application.
+```
+>    SetContext Sets the context for continuation upon exiting the application.
 
+```go
 func (agi *AGI) SetExtension(ext string) error
-    SetExtension Changes the extension for continuation upon exiting the
-    application.
+```
+>    SetExtension Changes the extension for continuation upon exiting the
+>    application.
 
+```go
 func (agi *AGI) SetMusic(opt string, class ...string) error
-    SetMusic Enables/Disables the music on hold generator. If class is not
-    specified, then the default music on hold class will be used.
+```
+>    SetMusic Enables/Disables the music on hold generator. If class is not
+>    specified, then the default music on hold class will be used.
+>
+>    Parameters: opt is "on" or "off", and music class as string
 
-    Parameters: opt is "on" or "off", and music class as string
-
+```go
 func (agi *AGI) SetPriority(priority string) error
-    SetPriority Changes the priority for continuation upon exiting the
-    application. The priority must be a valid priority or label.
+```
+>    SetPriority Changes the priority for continuation upon exiting the
+>    application. The priority must be a valid priority or label.
 
+```go
 func (agi *AGI) SetVariable(name, value string) error
-    SetVariable Sets a variable to the current channel.
+```
+>    SetVariable Sets a variable to the current channel.
 
+```go
 func (agi *AGI) StreamFile(file, escDigits string, offset int) (int, error)
-    StreamFile Send the given file, allowing playback to be interrupted by the
-    given digits, if any.
+```
+>    StreamFile Send the given file, allowing playback to be interrupted by the
+>    given digits, if any.
 
+```go
 func (agi *AGI) TDDMode(mode string) error
-    TDDMode Enable/Disable TDD transmission/reception on a channel.
+```
+>    TDDMode Enable/Disable TDD transmission/reception on a channel.
+>
+>    Modes: on, off, mate, tdd
 
-    Modes: on, off, mate, tdd
-
+```go
 func (agi *AGI) Verbose(msg string, level ...int) error
-    Verbose Sends message to the console via verbose message system. level is
-    the verbose level (1-4)
+```
+>    Verbose Sends message to the console via verbose message system. level is
+>    the verbose level (1-4)
 
+```go
 func (agi *AGI) WaitForDigit(timeout int) (string, error)
-    WaitForDigit Waits up to timeout *milliseconds* for channel to receive a
-    DTMF digit. Use -1 for the timeout value if you desire the call to block
-    indefinitely.
-
-    Return digit pressed as string or error
+```
+>    WaitForDigit Waits up to timeout *milliseconds* for channel to receive a
+>    DTMF digit. Use -1 for the timeout value if you desire the call to block
+>    indefinitely.
+>
+>    Return digit pressed as string or error
 

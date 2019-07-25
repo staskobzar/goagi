@@ -5,10 +5,10 @@ go:
 
 before_install:
   - go get github.com/stretchr/testify/assert
-  - go get ./...
+  - go get .
 
 script:
   - go test -race -coverprofile=coverage.txt -covermode=atomic
 
 after_success:
-  - bash <(curl -s https://codecov.io/bash) -t f0414e7c-240f-492f-a78c-354bf33321d9
+  - bash <(curl -s https://codecov.io/bash) -t 7d4968eb-381b-4456-87bc-41bdfe331648
