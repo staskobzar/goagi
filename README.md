@@ -167,9 +167,10 @@ func (agi *AGI) ControlStreamFile(filename, digits string, args ...interface{}) 
 >
 >    Returns the position where playback was terminated as endpos.
 >    Example:
+> ```go
 >    agi.ControlStreamFile("prompt_en", "19", "3000", "#", "0", "#", "1600")
 >    agi.ControlStreamFile("prompt_en", "")
->    agi.ControlStreamFile("prompt_en", "19", "", "", "", "#", "1600")
+>    agi.ControlStreamFile("prompt_en", "19", "", "", "", "#", "1600") ```
 
 ```go
 func (agi *AGI) DatabaseDel(family, key string) (bool, error)
