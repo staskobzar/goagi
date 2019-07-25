@@ -248,6 +248,9 @@ func TestRespHangup(t *testing.T) {
 func BenchmarkParseAGIResponse(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		str := "200 result=1 (timeout)\n"
-		parseResponse(str)
+		_, err := parseResponse(str)
+		if err != nil {
+			panic(err)
+		}
 	}
 }

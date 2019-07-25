@@ -512,6 +512,7 @@ func (agi *AGI) TDDMode(mode string) error {
 // level is the verbose level (1-4)
 func (agi *AGI) Verbose(msg string, level ...int) error {
 	var err error
+	msg = fmt.Sprintf("\"%s\"", msg)
 	if level == nil {
 		_, err = agi.execute("VERBOSE", msg)
 	} else {

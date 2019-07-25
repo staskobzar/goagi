@@ -62,12 +62,13 @@ func TestNewFastAGI(t *testing.T) {
 
 	ch := make(chan interface{})
 	go func() {
-		NewFastAGI("127.0.0.1:56111", func(agi *AGI) {
+		err := NewFastAGI("127.0.0.1:56111", func(agi *AGI) {
 			defer close(ch)
 			assert.Equal(t, "SIP/2222@default-00000023", agi.Env("channel"))
 			err := agi.Verbose("Accept new connection.")
 			assert.Nil(t, err)
 		})
+		assert.Nil(t, err)
 	}()
 
 	// this is very ugly way. TODO: find better way to sync listen/dial
@@ -79,5 +80,5 @@ func TestNewFastAGI(t *testing.T) {
 	<-ch
 	status, err := bufio.NewReader(conn).ReadString('\n')
 	assert.Nil(t, err)
-	assert.Equal(t, "VERBOSE Accept new connection.\n", status)
+	assert.Equal(t, "VERBOSE \"Accept new connection.\"\n", status)
 }

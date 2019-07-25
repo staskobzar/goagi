@@ -124,7 +124,6 @@ func (agi *AGI) read() (chan string, chan error) {
 }
 
 func compileCmd(cmd string, args ...interface{}) string {
-	cmd = fmt.Sprintf("%s", cmd)
 	for _, arg := range args {
 		val := fmt.Sprintf("%v", arg)
 		if len(val) > 0 {

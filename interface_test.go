@@ -191,7 +191,10 @@ func BenchmarkIFaceExecute(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		rw := dummyReadWrite("200 result=0 (timeout)\n")
 		agi := &AGI{io: rw}
-		agi.execute("ANSWER\n")
+		_, err := agi.execute("ANSWER\n")
+		if err != nil {
+			panic(err)
+		}
 	}
 }
 
