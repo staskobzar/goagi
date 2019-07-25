@@ -15,7 +15,6 @@ Usage example:
 	import (
 		"github.com/staskobzar/goagi"
 		"log"
-		"os"
 	)
 
 	int main() {
@@ -36,7 +35,6 @@ Usage example:
 		if err := agi.SetMusic("off"); err != nil {
 			log.Fatalln(err)
 		}
-		os.Exit(0)
 	}
 
 */
@@ -74,7 +72,6 @@ Usage example:
 	func myAgiProc(agi *AGI) {
 		agi.Verbose("New AGI session.")
 		agi.Answer()
-		clid agi.GetVariable("CALLERID")
 		clid, err := agi.GetVariable("CALLERID")
 		if err != nil {
 			log.Fatalln(err)

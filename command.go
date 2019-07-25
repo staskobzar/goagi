@@ -285,10 +285,8 @@ func (agi *AGI) ReceiveText(timeout int32) (string, error) {
 //	silence is the number of seconds of silence that are permitted before the
 // recording is terminated, regardless of the escape_digits or timeout arguments
 func (agi *AGI) RecordFile(file, format, escDigits string,
-	timeout, offset int,
-	beep bool,
-	silence int) error {
-	// RECORD FILE FILENAME FORMAT ESCAPE_DIGITS TIMEOUT OFFSET_SAMPLES BEEP S=SILENCE
+	timeout, offset int, beep bool, silence int) error {
+
 	cmd := "RECORD FILE"
 	cmd = fmt.Sprintf("%s %s %s %s", cmd, file, format, escDigits)
 	if beep {
