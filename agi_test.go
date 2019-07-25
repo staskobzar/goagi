@@ -1,6 +1,7 @@
 package goagi
 
 import (
+	"bufio"
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"net"
@@ -64,19 +65,19 @@ func TestNewFastAGI(t *testing.T) {
 		NewFastAGI("127.0.0.1:56111", func(agi *AGI) {
 			defer close(ch)
 			assert.Equal(t, "SIP/2222@default-00000023", agi.Env("channel"))
-			//agi.Verbose("Accept new connection.")
+			err := agi.Verbose("Accept new connection.")
+			assert.Nil(t, err)
 		})
 	}()
 
+	// this is very ugly way. TODO: find better way to sync listen/dial
 	time.Sleep(10 * time.Millisecond)
 	conn, err := net.Dial("tcp", "127.0.0.1:56111")
 	assert.Nil(t, err)
 	fmt.Fprintf(conn, input)
+	fmt.Fprintf(conn, "200 result=1\n")
 	<-ch
-	/*
-		fmt.Println("Read cmd")
-		status, err := bufio.NewReader(conn).ReadString('\n')
-		assert.Nil(t, err)
-		assert.Equal(t, "cms", status)
-	*/
+	status, err := bufio.NewReader(conn).ReadString('\n')
+	assert.Nil(t, err)
+	assert.Equal(t, "VERBOSE Accept new connection.\n", status)
 }

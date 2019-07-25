@@ -69,11 +69,11 @@ func (agi *AGI) setEnv(line string) error {
 }
 
 func (agi *AGI) execute(cmd string, args ...interface{}) (*agiResp, error) {
-
-	_, err := agi.io.Write(compileCmd(cmd, args...))
+	_, err := agi.io.WriteString(compileCmd(cmd, args...))
 	if err != nil {
 		return nil, err
 	}
+	agi.io.Flush()
 
 	chStr, chErr := agi.read()
 	select {
@@ -116,7 +116,7 @@ func (agi *AGI) read() (chan string, chan error) {
 	return chStr, chErr
 }
 
-func compileCmd(cmd string, args ...interface{}) []byte {
+func compileCmd(cmd string, args ...interface{}) string {
 	cmd = fmt.Sprintf("%s", cmd)
 	for _, arg := range args {
 		val := fmt.Sprintf("%v", arg)
@@ -126,6 +126,6 @@ func compileCmd(cmd string, args ...interface{}) []byte {
 			cmd = fmt.Sprintf("%s \"\"", cmd)
 		}
 	}
-	cmd = fmt.Sprintf("%s\n", cmd)
-	return []byte(cmd)
+
+	return fmt.Sprintf("%s\n", cmd)
 }

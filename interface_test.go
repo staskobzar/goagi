@@ -29,16 +29,15 @@ func dummyReadWriteRError() *bufio.ReadWriter {
 
 func TestIFaceCommandCompile(t *testing.T) {
 	resp := compileCmd("ANSWER")
-	assert.Equal(t, "ANSWER\n", string(resp))
+	assert.Equal(t, "ANSWER\n", resp)
 	resp = compileCmd("CHANNEL STATUS", "SIP/00007-1234")
-	assert.Equal(t, "CHANNEL STATUS SIP/00007-1234\n", string(resp))
+	assert.Equal(t, "CHANNEL STATUS SIP/00007-1234\n", resp)
 	resp = compileCmd("CHANNEL STATUS", "")
-	assert.Equal(t, "CHANNEL STATUS \"\"\n", string(resp))
+	assert.Equal(t, "CHANNEL STATUS \"\"\n", resp)
 	resp = compileCmd("CONTROL STREAM FILE", "welcome", "", 3000, 9, "#", "", 1600)
-	assert.Equal(t, "CONTROL STREAM FILE welcome \"\" 3000 9 # \"\" 1600\n",
-		string(resp))
+	assert.Equal(t, "CONTROL STREAM FILE welcome \"\" 3000 9 # \"\" 1600\n", resp)
 	resp = compileCmd("DATABASE DEL", "user", `"alice"`)
-	assert.Equal(t, "DATABASE DEL user \"alice\"\n", string(resp))
+	assert.Equal(t, "DATABASE DEL user \"alice\"\n", resp)
 }
 
 func TestIFaceInitSuccessful(t *testing.T) {
