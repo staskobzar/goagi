@@ -116,21 +116,21 @@ func (agi *AGI) AsyncAGIBreak() (bool, error)
 ```go
 func (agi *AGI) ChannelStatus(channel string) (int, error)
 ```
-    ChannelStatus returns status of the connected channel.
-
-    If no channel name is given (empty line) then returns the status of the
-    current channel.
-
-    Return values:
-
-    0 - Channel is down and available.
-    1 - Channel is down, but reserved.
-    2 - Channel is off hook.
-    3 - Digits (or equivalent) have been dialed.
-    4 - Line is ringing.
-    5 - Remote end is ringing.
-    6 - Line is up.
-    7 - Line is busy.
+>    ChannelStatus returns status of the connected channel.
+>
+>    If no channel name is given (empty line) then returns the status of the
+>    current channel.
+>
+>    Return values:
+>
+>    * 0 - Channel is down and available.
+>    * 1 - Channel is down, but reserved.
+>    * 2 - Channel is off hook.
+>    * 3 - Digits (or equivalent) have been dialed.
+>    * 4 - Line is ringing.
+>    * 5 - Remote end is ringing.
+>    * 6 - Line is up.
+>    * 7 - Line is busy.
 
 ```go
 func (agi *AGI) Command(cmd string) (code int, result int, respStr string, err error)
