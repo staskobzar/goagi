@@ -2,8 +2,10 @@ package goagi
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"strings"
+	"time"
 )
 
 const execTimeoutSec = 2
@@ -61,9 +63,9 @@ func (agi *AGI) setEnv(line string) error {
 		return EInvalEnv.withInfo(line)
 	}
 	if strings.HasPrefix(line, "agi_arg_") {
-		agi.arg = append(agi.arg, line[idx+2:len(line)])
+		agi.arg = append(agi.arg, line[idx+2:])
 	} else {
-		agi.env[line[4:idx]] = line[idx+2 : len(line)]
+		agi.env[line[4:idx]] = line[idx+2:]
 	}
 	return nil
 }
@@ -75,8 +77,13 @@ func (agi *AGI) execute(cmd string, args ...interface{}) (*agiResp, error) {
 	}
 	agi.io.Flush()
 
+	ctx, cancel := context.WithTimeout(context.Background(), execTimeoutSec*time.Second)
+	defer cancel()
+
 	chStr, chErr := agi.read()
 	select {
+	case <-ctx.Done():
+		return nil, errorNew("Execution read timeout.")
 	case str := <-chStr:
 		return parseResponse(str)
 	case err := <-chErr:

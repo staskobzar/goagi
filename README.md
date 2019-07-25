@@ -1,8 +1,12 @@
 # goagi: Golang library to build agi/fastagi applications
 
-[![beta](https://img.shields.io/badge/v1-BETA-orange)(https://github.com/staskobzar/goagi)]
+[![beta](https://img.shields.io/badge/v1-BETA-orange)](https://github.com/staskobzar/goagi)
 [![Build Status](https://travis-ci.org/staskobzar/goagi.svg?branch=master)](https://travis-ci.org/staskobzar/goagi)
 [![codecov](https://codecov.io/gh/staskobzar/goagi/branch/master/graph/badge.svg)](https://codecov.io/gh/staskobzar/goagi)
+[![CodeFactor](https://www.codefactor.io/repository/github/staskobzar/goagi/badge)](https://www.codefactor.io/repository/github/staskobzar/goagi)
+[![Scrutinizer Code Quality](https://scrutinizer-ci.com/g/staskobzar/goagi/badges/quality-score.png?b=master)](https://scrutinizer-ci.com/g/staskobzar/goagi/?branch=master)
+[![Go Report Card](https://goreportcard.com/badge/github.com/staskobzar/goagi)](https://goreportcard.com/report/github.com/staskobzar/goagi)
+![GitHub](https://img.shields.io/github/license/staskobzar/goagi?style=plastic)
 
 
 
@@ -11,8 +15,8 @@ Simple library that helps to build AGI sctipts or FastAGI servers with Go.
 import "github.com/staskobzar/goagi"
 ```
 
-## Usage AGI
-Main method for AGI scripts is ```goagi.NewAGI()```.
+## Usage FastAGI
+Main method to build FastAGI scripts is ```goagi.NewFastAGI(addr, callback)```.
 
 Example:
 ```go
@@ -42,8 +46,8 @@ Example:
     }
 ```
 
-## Usage FastAGI
-Main method to build FastAGI scripts is ```goagi.NewFastAGI(addr, callback)```.
+## Usage AGI
+Main method for AGI scripts is ```goagi.NewAGI()```.
 
 Example:
 ```go
