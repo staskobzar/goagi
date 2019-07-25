@@ -2,13 +2,9 @@ package goagi
 
 import (
 	"bufio"
-	"context"
 	"fmt"
 	"strings"
-	"time"
 )
-
-const execTimeoutSec = 2
 
 // AGI interface structure
 type AGI struct {
@@ -77,13 +73,8 @@ func (agi *AGI) execute(cmd string, args ...interface{}) (*agiResp, error) {
 	}
 	agi.io.Flush()
 
-	ctx, cancel := context.WithTimeout(context.Background(), execTimeoutSec*time.Second)
-	defer cancel()
-
 	chStr, chErr := agi.read()
 	select {
-	case <-ctx.Done():
-		return nil, errorNew("Execution read timeout.")
 	case str := <-chStr:
 		return parseResponse(str)
 	case err := <-chErr:
