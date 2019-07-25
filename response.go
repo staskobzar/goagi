@@ -15,7 +15,10 @@ var (
 type agiResp struct {
 	code   int
 	result int32
+	endpos int32
+	value  string
 	data   string
+	raw    string
 }
 
 func (resp *agiResp) isOk() bool {
@@ -23,17 +26,17 @@ func (resp *agiResp) isOk() bool {
 }
 
 func parseResponse(text string) (*agiResp, error) {
-	resp := &agiResp{}
+	resp := &agiResp{result: -1, endpos: -1, raw: text}
 	lex := &lexer{input: text}
 
 	if lex.lookForward("HANGUP\n") {
-		return nil, EHangUp
+		return resp, EHangUp
 	}
 
 	// state machine
 	for scanner, err := scanCode(lex, resp); ; scanner, err = scanner(lex, resp) {
 		if err != nil {
-			return nil, err
+			return resp, err
 		}
 		if scanner == nil {
 			break
@@ -92,20 +95,54 @@ func scanResult(l *lexer, resp *agiResp) (scanFunc, error) {
 	} else {
 		resp.result = l.atoi()
 	}
+	return scanValue, nil
+}
+
+func scanValue(l *lexer, resp *agiResp) (scanFunc, error) {
+	if pos := l.skipWhitespace(); pos == eof {
+		return nil, nil
+	}
+	if chr := l.peek(); chr != '(' {
+		return scanEndpos, nil
+	}
+	l.next() // skip "("
+	l.ignore()
+	for {
+		char := l.next()
+		if char == eof || char == '\n' || char == ')' {
+			l.backup()
+			break
+		}
+	}
+	resp.value = l.input[l.start:l.pos]
+	l.next()
+	l.ignore()
+	return scanEndpos, nil
+}
+
+func scanEndpos(l *lexer, resp *agiResp) (scanFunc, error) {
+	if pos := l.skipWhitespace(); pos == eof {
+		return nil, nil
+	}
+	pattern := "endpos="
+	if !l.lookForward(pattern) {
+		return scanData, nil
+	}
+	l.pos += len(pattern)
+	l.start = l.pos
+	for {
+		if chr := l.peek(); unicode.IsSpace(chr) || chr == eof {
+			break
+		}
+		l.next()
+	}
+	resp.endpos = l.atoi()
 	return scanData, nil
 }
 
 func scanData(l *lexer, resp *agiResp) (scanFunc, error) {
-	// skip spaces in the begining
-	for {
-		char := l.next()
-		if char == eof {
-			return nil, nil
-		}
-		if !unicode.IsSpace(char) {
-			break
-		}
-		l.ignore()
+	if pos := l.skipWhitespace(); pos == eof {
+		return nil, nil
 	}
 	for {
 		char := l.next()
@@ -182,35 +219,19 @@ func (l *lexer) lookForward(pattern string) bool {
 	return pos <= len(l.input) && l.input[l.pos:pos] == pattern
 }
 
-func (l *lexer) extractResposeValue() string {
-	if l.pos == len(l.input) {
-		return ""
-	}
-	if l.input[l.pos:l.pos+1] != "(" {
-		return ""
-	}
-	l.pos++
-
-	return l.input[l.pos : len(l.input)-1]
-}
-
-func (l *lexer) extractEndpos() int32 {
-	pattern := "endpos="
-	if !l.lookForward(pattern) {
-		return -1
-	}
-	l.pos += len(pattern)
-	l.start = l.pos
+func (l *lexer) skipWhitespace() int {
 	for {
-		if chr := l.peek(); unicode.IsSpace(chr) || chr == eof {
+		char := l.next()
+		if char == eof {
+			return eof
+		}
+		if !unicode.IsSpace(char) {
+			l.backup()
 			break
 		}
-		l.next()
+		l.ignore()
 	}
-	if l.start == l.pos {
-		return -1
-	}
-	return l.atoi()
+	return l.pos
 }
 
 func (l *lexer) atoi() int32 {

@@ -14,7 +14,7 @@ func TestCmdCommandOk(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, 200, code)
 	assert.Equal(t, 25, result)
-	assert.Equal(t, "endpos=542268", respStr)
+	assert.Equal(t, resp, respStr)
 }
 
 func TestCmdCommandFail(t *testing.T) {
@@ -124,10 +124,10 @@ func TestCmdControlStreamFileFail(t *testing.T) {
 	resp := "200 result=-1 endpos=2541236\n"
 	rw := dummyReadWrite(resp)
 	agi := &AGI{io: rw}
-	_, err := agi.ControlStreamFile("welcome", "")
+	_, err := agi.ControlStreamFile("welcome", "123")
 	assert.NotNil(t, err)
 
-	rw = dummyReadWriteWError()
+	rw = dummyReadWriteRError()
 	agi = &AGI{io: rw}
 	_, err = agi.ControlStreamFile("welcome", "")
 	assert.NotNil(t, err)
@@ -260,28 +260,20 @@ func TestCmdExecFail(t *testing.T) {
 
 // command GetData
 func TestCmdGetDataOk(t *testing.T) {
-	resp := "200 result=23 (timeout)\n"
+	resp := "200 result=42 (timeout)\n"
 	rw := dummyReadWrite(resp)
 	agi := &AGI{io: rw}
 	res, tout, err := agi.GetData("prompt", 1000, 3)
 	assert.Nil(t, err)
-	assert.Equal(t, 23, res)
+	assert.Equal(t, "*", res)
 	assert.True(t, tout)
 
-	resp = "200 result= (timeout)\n"
+	resp = "200 result=49\n"
 	rw = dummyReadWrite(resp)
 	agi = &AGI{io: rw}
 	res, tout, err = agi.GetData("prompt", 1000, 3)
 	assert.Nil(t, err)
-	assert.Equal(t, -3, res)
-	assert.True(t, tout)
-
-	resp = "200 result=358\n"
-	rw = dummyReadWrite(resp)
-	agi = &AGI{io: rw}
-	res, tout, err = agi.GetData("prompt", 1000, 3)
-	assert.Nil(t, err)
-	assert.Equal(t, 358, res)
+	assert.Equal(t, "1", res)
 	assert.False(t, tout)
 }
 
@@ -291,14 +283,14 @@ func TestCmdGetDataFail(t *testing.T) {
 	agi := &AGI{io: rw}
 	res, tout, err := agi.GetData("prompt", 1000, 3)
 	assert.NotNil(t, err)
-	assert.Equal(t, -1, res)
+	assert.Equal(t, "", res)
 	assert.False(t, tout)
 
 	rw = dummyReadWriteWError()
 	agi = &AGI{io: rw}
 	res, tout, err = agi.GetData("prompt", 1000, 3)
 	assert.NotNil(t, err)
-	assert.Equal(t, -1, res)
+	assert.Equal(t, "", res)
 	assert.False(t, tout)
 }
 

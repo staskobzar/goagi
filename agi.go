@@ -19,7 +19,7 @@ Usage example:
 	)
 
 	int main() {
-		agi, err := goagi.NewAgi()
+		agi, err := goagi.NewAGI()
 		if err != nil {
 			log.Fatalln(err)
 		}
@@ -41,8 +41,8 @@ Usage example:
 
 */
 func NewAGI() (*AGI, error) {
-	in := bufio.NewWriter(os.Stdin)
-	out := bufio.NewReader(os.Stdout)
+	in := bufio.NewWriter(os.Stdout)
+	out := bufio.NewReader(os.Stdin)
 
 	agi, err := newInterface(bufio.NewReadWriter(out, in))
 	if err != nil {
@@ -70,6 +70,7 @@ Usage example:
 	}
 
 	// callback function
+	// net accepted connection will be closed with the callback function returns
 	func myAgiProc(agi *AGI) {
 		agi.Verbose("New AGI session.")
 		agi.Answer()
@@ -92,12 +93,17 @@ func NewFastAGI(listenAddr string, callback callbackFunc) error {
 		if err != nil {
 			return err
 		}
+
 		in := bufio.NewWriter(conn)
 		out := bufio.NewReader(conn)
 		agi, err := newInterface(bufio.NewReadWriter(out, in))
 		if err != nil {
 			return err
 		}
-		go callback(agi)
+
+		go func(agi *AGI, conn net.Conn) {
+			defer conn.Close()
+			callback(agi)
+		}(agi, conn)
 	}
 }

@@ -6,12 +6,12 @@ import (
 
 // Command sends command as string to the AGI and returns response valus with
 // text response
-func (agi *AGI) Command(cmd string) (code int, result int, data string, err error) {
+func (agi *AGI) Command(cmd string) (code int, result int, respStr string, err error) {
 	resp, err := agi.execute(cmd)
 	if err != nil {
 		return -1, -1, "", err
 	}
-	return resp.code, int(resp.result), resp.data, nil
+	return resp.code, int(resp.result), resp.raw, nil
 }
 
 // Answer executes AGI command "ANSWER"
@@ -88,13 +88,8 @@ func (agi *AGI) ControlStreamFile(filename, digits string, args ...interface{}) 
 	if resp.result == -1 {
 		return resp.result, errorNew("Error or channel disconnected.")
 	}
-	l := &lexer{input: resp.data}
-	if l.lookForward("endpos=") {
-		l.start = 7
-		l.pos = len(l.input)
-		return l.atoi(), nil
-	}
-	return -1, errorNew("Invalid response.")
+
+	return resp.endpos, nil
 }
 
 // DatabaseDel deletes an entry in the Asterisk database for a given family and key.
@@ -128,12 +123,7 @@ func (agi *AGI) DatabaseGet(family, key string) (string, error) {
 	if resp.result == 0 {
 		return "", errorNew("Value not set.")
 	}
-	val := resp.data
-	ln := len(val)
-	if ln < 2 {
-		return "", nil
-	}
-	return val[1 : ln-1], nil
+	return resp.value, nil
 }
 
 // DatabasePut adds or updates an entry in the Asterisk database for
@@ -161,17 +151,17 @@ func (agi *AGI) Exec(app, opts string) (int, error) {
 }
 
 // GetData Stream the given file, and receive DTMF data.
-func (agi *AGI) GetData(file string, args ...interface{}) (digits int, timeout bool, err error) {
+func (agi *AGI) GetData(file string, args ...interface{}) (digit string, timeout bool, err error) {
 	cmd := "GET DATA " + file
 	resp, err := agi.execute(cmd, args...)
 	if err != nil {
-		return -1, false, err
+		return "", false, err
 	}
-	if resp.result == -1 {
-		return -1, false, errorNew("Failed get data.")
+	if resp.result < 0 {
+		return "", false, errorNew("Failed get data.")
 	}
-	timeout = len(resp.data) > 8 && resp.data[0:9] == "(timeout)"
-	digits = int(resp.result)
+	timeout = resp.value == "timeout"
+	digit = string(resp.result)
 	return
 }
 
@@ -192,8 +182,7 @@ func (agi *AGI) GetFullVariable(name string, channel ...string) (string, error) 
 		return "", errorNew("Variable is not set.")
 	}
 
-	l := &lexer{input: resp.data}
-	return l.extractResposeValue(), nil
+	return resp.value, nil
 }
 
 // GetOption Stream file, prompt for DTMF, with timeout.
@@ -205,18 +194,16 @@ func (agi *AGI) GetOption(filename, digits string, timeout int32) (int, int32, e
 	if err != nil {
 		return -1, 0, err
 	}
-	l := &lexer{input: resp.data}
-	endpos := l.extractEndpos()
 
 	if resp.result == -1 {
 		return -1, 0, errorNew("Command failure")
 	}
 
-	if resp.result == 0 && endpos == 0 {
+	if resp.result == 0 && resp.endpos == 0 {
 		return -1, 0, errorNew("Failure on open")
 	}
 
-	return int(resp.result), endpos, nil
+	return int(resp.result), resp.endpos, nil
 }
 
 // GetVariable Gets a channel variable.
@@ -229,8 +216,7 @@ func (agi *AGI) GetVariable(name string) (string, error) {
 		return "", errorNew("Variable is not set.")
 	}
 
-	l := &lexer{input: resp.data}
-	return l.extractResposeValue(), nil
+	return resp.value, nil
 }
 
 // Hangup a channel.
@@ -285,8 +271,7 @@ func (agi *AGI) ReceiveText(timeout int32) (string, error) {
 	if resp.result == -1 {
 		return "", errorNew("Failure, hangup or timeout.")
 	}
-	l := &lexer{input: resp.data}
-	return l.extractResposeValue(), nil
+	return resp.value, nil
 }
 
 // RecordFile Record to a file until a given dtmf digit in the sequence is received.

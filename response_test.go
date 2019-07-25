@@ -11,42 +11,74 @@ func TestRespOkZero(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, 200, r.code)
 	assert.EqualValues(t, 0, r.result)
+	assert.EqualValues(t, -1, r.endpos)
+	assert.Equal(t, "", r.value)
 	assert.Equal(t, "", r.data)
+	assert.Equal(t, str, r.raw)
 }
 
 func TestRespInvalCode(t *testing.T) {
 	str := "a200 result=0\n"
-	_, err := parseResponse(str)
+	r, err := parseResponse(str)
 	assert.NotNil(t, err)
 	assert.Equal(t, err, EInvalResp)
+	assert.Equal(t, 0, r.code)
+	assert.EqualValues(t, -1, r.result)
+	assert.EqualValues(t, -1, r.endpos)
+	assert.Equal(t, "", r.value)
+	assert.Equal(t, "", r.data)
+	assert.Equal(t, str, r.raw)
 }
 
 func TestRespTooShort(t *testing.T) {
 	str := "200\n"
-	_, err := parseResponse(str)
+	r, err := parseResponse(str)
 	assert.NotNil(t, err)
 	assert.Equal(t, err, EInvalResp)
+	assert.Equal(t, 200, r.code)
+	assert.EqualValues(t, -1, r.result)
+	assert.EqualValues(t, -1, r.endpos)
+	assert.Equal(t, "", r.value)
+	assert.Equal(t, "", r.data)
+	assert.Equal(t, str, r.raw)
 }
 
 func TestRespNoSpaceAfterCode(t *testing.T) {
 	str := "200result=1\n"
-	_, err := parseResponse(str)
+	r, err := parseResponse(str)
 	assert.NotNil(t, err)
 	assert.Equal(t, err, EInvalResp)
+	assert.Equal(t, 200, r.code)
+	assert.EqualValues(t, -1, r.result)
+	assert.EqualValues(t, -1, r.endpos)
+	assert.Equal(t, "", r.value)
+	assert.Equal(t, "", r.data)
+	assert.Equal(t, str, r.raw)
 }
 
 func TestRespInvalidResponseResult(t *testing.T) {
 	str := "200 foo=1\n"
-	_, err := parseResponse(str)
+	r, err := parseResponse(str)
 	assert.NotNil(t, err)
 	assert.Equal(t, err, EInvalResp)
+	assert.Equal(t, 200, r.code)
+	assert.EqualValues(t, -1, r.result)
+	assert.EqualValues(t, -1, r.endpos)
+	assert.Equal(t, "", r.value)
+	assert.Equal(t, "", r.data)
+	assert.Equal(t, str, r.raw)
 }
 
 func TestRespResultMissing(t *testing.T) {
 	str := "200 result=\n"
 	r, err := parseResponse(str)
 	assert.Nil(t, err)
+	assert.Equal(t, 200, r.code)
 	assert.EqualValues(t, -3, r.result)
+	assert.EqualValues(t, -1, r.endpos)
+	assert.Equal(t, "", r.value)
+	assert.Equal(t, "", r.data)
+	assert.Equal(t, str, r.raw)
 }
 
 func TestRespOkOne(t *testing.T) {
@@ -55,7 +87,10 @@ func TestRespOkOne(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, 200, r.code)
 	assert.EqualValues(t, 1, r.result)
+	assert.EqualValues(t, -1, r.endpos)
+	assert.Equal(t, "", r.value)
 	assert.Equal(t, "", r.data)
+	assert.Equal(t, str, r.raw)
 }
 
 func TestRespOkMinusOne(t *testing.T) {
@@ -64,7 +99,10 @@ func TestRespOkMinusOne(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, 200, r.code)
 	assert.EqualValues(t, -1, r.result)
+	assert.EqualValues(t, -1, r.endpos)
+	assert.Equal(t, "", r.value)
 	assert.Equal(t, "", r.data)
+	assert.Equal(t, str, r.raw)
 }
 
 func TestRespOkWithShortData(t *testing.T) {
@@ -73,16 +111,70 @@ func TestRespOkWithShortData(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, 200, r.code)
 	assert.EqualValues(t, 1, r.result)
-	assert.Equal(t, "(timeout)", r.data)
+	assert.EqualValues(t, -1, r.endpos)
+	assert.Equal(t, "timeout", r.value)
+	assert.Equal(t, "", r.data)
+	assert.Equal(t, str, r.raw)
 }
 
-func TestRespOkWithLongData(t *testing.T) {
+func TestRespOkDTMFendpos(t *testing.T) {
 	str := "200 result=5 (dtmf) endpos=123456\n"
 	r, err := parseResponse(str)
 	assert.Nil(t, err)
 	assert.Equal(t, 200, r.code)
 	assert.EqualValues(t, 5, r.result)
-	assert.Equal(t, "(dtmf) endpos=123456", r.data)
+	assert.Equal(t, "dtmf", r.value)
+	assert.EqualValues(t, 123456, r.endpos)
+	assert.Equal(t, "", r.data)
+	assert.Equal(t, str, r.raw)
+}
+
+func TestRespOkHangupEndpos(t *testing.T) {
+	str := "200 result=-1 (hangup) endpos=554687\n"
+	r, err := parseResponse(str)
+	assert.Nil(t, err)
+	assert.Equal(t, 200, r.code)
+	assert.EqualValues(t, -1, r.result)
+	assert.Equal(t, "hangup", r.value)
+	assert.EqualValues(t, 554687, r.endpos)
+	assert.Equal(t, "", r.data)
+	assert.Equal(t, str, r.raw)
+}
+
+func TestRespOkValueEndposAndData(t *testing.T) {
+	str := "200 result=1 (fooBar) endpos=55468 Additional message\n"
+	r, err := parseResponse(str)
+	assert.Nil(t, err)
+	assert.Equal(t, 200, r.code)
+	assert.EqualValues(t, 1, r.result)
+	assert.Equal(t, "fooBar", r.value)
+	assert.EqualValues(t, 55468, r.endpos)
+	assert.Equal(t, "Additional message", r.data)
+	assert.Equal(t, str, r.raw)
+}
+
+func TestRespOkDataOnly(t *testing.T) {
+	str := "200 result=1 Gosub failed\n"
+	r, err := parseResponse(str)
+	assert.Nil(t, err)
+	assert.Equal(t, 200, r.code)
+	assert.EqualValues(t, 1, r.result)
+	assert.Equal(t, "", r.value)
+	assert.EqualValues(t, -1, r.endpos)
+	assert.Equal(t, "Gosub failed", r.data)
+	assert.Equal(t, str, r.raw)
+}
+
+func TestRespOk100Trying(t *testing.T) {
+	str := "100 result=0 Trying...\n"
+	r, err := parseResponse(str)
+	assert.Nil(t, err)
+	assert.Equal(t, 100, r.code)
+	assert.EqualValues(t, 0, r.result)
+	assert.EqualValues(t, -1, r.endpos)
+	assert.Equal(t, "", r.value)
+	assert.Equal(t, "Trying...", r.data)
+	assert.Equal(t, str, r.raw)
 }
 
 func TestRespError520(t *testing.T) {
@@ -91,7 +183,10 @@ func TestRespError520(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, 520, r.code)
 	assert.EqualValues(t, -1, r.result)
+	assert.EqualValues(t, -1, r.endpos)
+	assert.Equal(t, "", r.value)
 	assert.Equal(t, "Invalid command syntax.  Proper usage not available.", r.data)
+	assert.Equal(t, str, r.raw)
 }
 
 func TestRespError520Long(t *testing.T) {
@@ -108,7 +203,10 @@ func TestRespError520Long(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, 520, r.code)
 	assert.EqualValues(t, -1, r.result)
+	assert.EqualValues(t, -1, r.endpos)
+	assert.Equal(t, "", r.value)
 	assert.Equal(t, data, r.data)
+	assert.Equal(t, str, r.raw)
 }
 
 func TestRespError511(t *testing.T) {
@@ -117,7 +215,10 @@ func TestRespError511(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, 511, r.code)
 	assert.EqualValues(t, -1, r.result)
+	assert.EqualValues(t, -1, r.endpos)
+	assert.Equal(t, "", r.value)
 	assert.Equal(t, "Command Not Permitted on a dead channel", r.data)
+	assert.Equal(t, str, r.raw)
 }
 
 func TestRespError510(t *testing.T) {
@@ -126,36 +227,22 @@ func TestRespError510(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, 510, r.code)
 	assert.EqualValues(t, -1, r.result)
+	assert.EqualValues(t, -1, r.endpos)
+	assert.Equal(t, "", r.value)
 	assert.Equal(t, "Invalid or unknown command", r.data)
+	assert.Equal(t, str, r.raw)
 }
 
 func TestRespHangup(t *testing.T) {
 	str := "HANGUP\n"
-	_, err := parseResponse(str)
+	r, err := parseResponse(str)
 	assert.NotNil(t, err)
 	assert.Equal(t, err, EHangUp)
-}
-
-func TestRespExtractValue(t *testing.T) {
-	l := &lexer{input: "(var value)"}
-	assert.Equal(t, "var value", l.extractResposeValue())
-	l = &lexer{input: ""}
-	assert.Equal(t, "", l.extractResposeValue())
-	l = &lexer{input: "something wrong"}
-	assert.Equal(t, "", l.extractResposeValue())
-	l = &lexer{input: "(12454785415.001)"}
-	assert.Equal(t, "12454785415.001", l.extractResposeValue())
-}
-
-func TestRespExtractEndpos(t *testing.T) {
-	l := &lexer{input: "endpos=54568"}
-	assert.EqualValues(t, 54568, l.extractEndpos())
-	l = &lexer{input: "foo"}
-	assert.EqualValues(t, -1, l.extractEndpos())
-	l = &lexer{input: "endpos=0"}
-	assert.EqualValues(t, 0, l.extractEndpos())
-	l = &lexer{input: "endpos="}
-	assert.EqualValues(t, -1, l.extractEndpos())
+	assert.EqualValues(t, -1, r.result)
+	assert.EqualValues(t, -1, r.endpos)
+	assert.Equal(t, "", r.value)
+	assert.Equal(t, "", r.data)
+	assert.Equal(t, str, r.raw)
 }
 
 func BenchmarkParseAGIResponse(b *testing.B) {

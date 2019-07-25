@@ -177,7 +177,7 @@ func TestIFaceExecute(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, 200, resp.code)
 	assert.EqualValues(t, -1, resp.result)
-	assert.Equal(t, "(dtmf)", resp.data)
+	assert.Equal(t, "dtmf", resp.value)
 }
 
 func TestIFaceExecuteFailWrite(t *testing.T) {
