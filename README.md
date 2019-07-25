@@ -6,7 +6,7 @@
 [![CodeFactor](https://www.codefactor.io/repository/github/staskobzar/goagi/badge)](https://www.codefactor.io/repository/github/staskobzar/goagi)
 [![Scrutinizer Code Quality](https://scrutinizer-ci.com/g/staskobzar/goagi/badges/quality-score.png?b=master)](https://scrutinizer-ci.com/g/staskobzar/goagi/?branch=master)
 [![Go Report Card](https://goreportcard.com/badge/github.com/staskobzar/goagi)](https://goreportcard.com/report/github.com/staskobzar/goagi)
-![GitHub](https://img.shields.io/github/license/staskobzar/goagi?style=plastic)
+![GitHub](https://img.shields.io/github/license/staskobzar/goagi)
 
 
 
