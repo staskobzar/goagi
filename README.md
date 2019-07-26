@@ -39,7 +39,7 @@ Example:
 
     func main() {
 	// listen and serve
-	err := NewFastAGI(":8000", myAgiProc)
+	err := goagi.NewFastAGI(":8000", myAgiProc)
 	if err != nil {
 	    log.Fatalln(err)
 	}
