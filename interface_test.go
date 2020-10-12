@@ -2,12 +2,40 @@ package goagi
 
 import (
 	"bufio"
-	"github.com/stretchr/testify/assert"
 	"io"
 	"io/ioutil"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
+
+const agiInput = "agi_network: yes\n" +
+	"agi_network_script: foo?\n" +
+	"agi_request: agi://127.0.0.1/foo?\n" +
+	"agi_channel: SIP/2222@default-00000023\n" +
+	"agi_language: en\n" +
+	"agi_type: SIP\n" +
+	"agi_uniqueid: 1397044468.0\n" +
+	"agi_version: 0.1\n" +
+	"agi_callerid: 5001\n" +
+	"agi_calleridname: Alice\n" +
+	"agi_callingpres: 67\n" +
+	"agi_callingani2: 0\n" +
+	"agi_callington: 0\n" +
+	"agi_callingtns: 0\n" +
+	"agi_dnid: 123456\n" +
+	"agi_rdnis: unknown\n" +
+	"agi_context: default\n" +
+	"agi_extension: 2222\n" +
+	"agi_priority: 1\n" +
+	"agi_enhanced: 0.0\n" +
+	"agi_accountcode: 0\n" +
+	"agi_threadid: 140536028174080\n" +
+	"agi_arg_1: argument1\n" +
+	"agi_arg_2: bar=123\n" +
+	"agi_arg_3: 3\n" +
+	"\n"
 
 func dummyReadWrite(input string) *bufio.ReadWriter {
 	reader := strings.NewReader(input)
@@ -41,34 +69,7 @@ func TestIFaceCommandCompile(t *testing.T) {
 }
 
 func TestIFaceInitSuccessful(t *testing.T) {
-	input := "agi_network: yes\n" +
-		"agi_network_script: foo?\n" +
-		"agi_request: agi://127.0.0.1/foo?\n" +
-		"agi_channel: SIP/2222@default-00000023\n" +
-		"agi_language: en\n" +
-		"agi_type: SIP\n" +
-		"agi_uniqueid: 1397044468.0\n" +
-		"agi_version: 0.1\n" +
-		"agi_callerid: 5001\n" +
-		"agi_calleridname: Alice\n" +
-		"agi_callingpres: 67\n" +
-		"agi_callingani2: 0\n" +
-		"agi_callington: 0\n" +
-		"agi_callingtns: 0\n" +
-		"agi_dnid: 123456\n" +
-		"agi_rdnis: unknown\n" +
-		"agi_context: default\n" +
-		"agi_extension: 2222\n" +
-		"agi_priority: 1\n" +
-		"agi_enhanced: 0.0\n" +
-		"agi_accountcode: 0\n" +
-		"agi_threadid: 140536028174080\n" +
-		"agi_arg_1: argument1\n" +
-		"agi_arg_2: bar=123\n" +
-		"agi_arg_3: 3\n" +
-		"\n"
-
-	rw := dummyReadWrite(input)
+	rw := dummyReadWrite(agiInput)
 	agi, err := newInterface(rw)
 
 	assert.Nil(t, err)
@@ -199,35 +200,8 @@ func BenchmarkIFaceExecute(b *testing.B) {
 }
 
 func BenchmarkAGInterfaceInit(b *testing.B) {
-	input := "agi_network: yes\n" +
-		"agi_network_script: foo?\n" +
-		"agi_request: agi://127.0.0.1/foo?\n" +
-		"agi_channel: SIP/2222@default-00000023\n" +
-		"agi_language: en\n" +
-		"agi_type: SIP\n" +
-		"agi_uniqueid: 1397044468.0\n" +
-		"agi_version: 0.1\n" +
-		"agi_callerid: 5001\n" +
-		"agi_calleridname: Alice\n" +
-		"agi_callingpres: 67\n" +
-		"agi_callingani2: 0\n" +
-		"agi_callington: 0\n" +
-		"agi_callingtns: 0\n" +
-		"agi_dnid: 123456\n" +
-		"agi_rdnis: unknown\n" +
-		"agi_context: default\n" +
-		"agi_extension: 2222\n" +
-		"agi_priority: 1\n" +
-		"agi_enhanced: 0.0\n" +
-		"agi_accountcode: 0\n" +
-		"agi_threadid: 140536028174080\n" +
-		"agi_arg_1: argument1\n" +
-		"agi_arg_2: bar=123\n" +
-		"agi_arg_3: 3\n" +
-		"\n"
-
 	for i := 0; i < b.N; i++ {
-		rw := dummyReadWrite(input)
+		rw := dummyReadWrite(agiInput)
 		agi, _ := newInterface(rw)
 		agi.Env("network")
 	}

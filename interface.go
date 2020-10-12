@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"strings"
+	"time"
 )
 
 // AGI interface structure
@@ -13,9 +14,13 @@ type AGI struct {
 	io  *bufio.ReadWriter
 }
 
+const respTout = time.Millisecond * 100
+
 var (
-	// EInvalEnv error returned when AGI environment header is not valid
+	// error returned when AGI environment header is not valid
 	EInvalEnv = errorNew("Invalid AGI env variable")
+	// error returned when response read is timed out
+	ERespTout = errorNew("Response receive timeout")
 )
 
 func newInterface(iodev *bufio.ReadWriter) (*AGI, error) {
@@ -79,6 +84,8 @@ func (agi *AGI) execute(cmd string, args ...interface{}) (*agiResp, error) {
 		return parseResponse(str)
 	case err := <-chErr:
 		return nil, err
+	case <-time.After(respTout):
+		return nil, ERespTout
 	}
 }
 

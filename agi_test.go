@@ -1,13 +1,12 @@
 package goagi
 
 import (
-	"bufio"
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"net"
 	"os"
 	"testing"
-	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestNewAGI(t *testing.T) {
@@ -60,25 +59,21 @@ func TestNewFastAGI(t *testing.T) {
 		"agi_arg_2: bar=123\n" +
 		"\n"
 
-	ch := make(chan interface{})
-	go func() {
-		err := NewFastAGI("127.0.0.1:56111", func(agi *AGI) {
-			defer close(ch)
-			assert.Equal(t, "SIP/2222@default-00000023", agi.Env("channel"))
-			err := agi.Verbose("Accept new connection.")
-			assert.Nil(t, err)
-		})
-		assert.Nil(t, err)
-	}()
+	fagi, err := NewFastAGI("127.0.0.1:0")
 
-	// this is very ugly way. TODO: find better way to sync listen/dial
-	time.Sleep(10 * time.Millisecond)
-	conn, err := net.Dial("tcp", "127.0.0.1:56111")
 	assert.Nil(t, err)
+
+	conn, err := net.Dial("tcp", fagi.ln.Addr().String())
+	assert.Nil(t, err)
+
 	fmt.Fprintf(conn, input)
+	agi := <-fagi.Conn()
+
+	assert.Equal(t, "SIP/2222@default-00000023", agi.Env("channel"))
 	fmt.Fprintf(conn, "200 result=1\n")
-	<-ch
-	status, err := bufio.NewReader(conn).ReadString('\n')
+	err = agi.Verbose("Accept new connection.")
 	assert.Nil(t, err)
-	assert.Equal(t, "VERBOSE \"Accept new connection.\"\n", status)
+
+	assert.Nil(t, fagi.Err())
+	fagi.Close()
 }

@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"net"
 	"os"
+	"sync"
 )
 
 /*
@@ -12,6 +13,7 @@ Parses AGI arguments and set ready for communication.
 
 Usage example:
 
+```go
 	import (
 		"github.com/staskobzar/goagi"
 		"log"
@@ -36,6 +38,7 @@ Usage example:
 			log.Fatalln(err)
 		}
 	}
+```
 
 */
 func NewAGI() (*AGI, error) {
@@ -49,58 +52,104 @@ func NewAGI() (*AGI, error) {
 	return agi, nil
 }
 
-type callbackFunc func(agi *AGI)
+// FastAGI defines sturcture of fast AGI server
+type FastAGI struct {
+	mu  sync.Mutex
+	ch  chan *AGI
+	ln  net.Listener
+	err error
+}
+
+// Conn returns AGI instance on every Asterisk connection
+func (fagi *FastAGI) Conn() <-chan *AGI {
+	return fagi.ch
+}
+
+// Err sets error on Fast AGI processing error
+func (fagi *FastAGI) Err() error {
+	fagi.mu.Lock()
+	err := fagi.err
+	fagi.mu.Unlock()
+	return err
+}
+
+// Close terminates Fast AGI
+func (fagi *FastAGI) Close() {
+	fagi.ln.Close()
+	close(fagi.ch)
+}
+
+func (fagi *FastAGI) setErr(err error) {
+	fagi.mu.Lock()
+	fagi.err = err
+	fagi.mu.Unlock()
+}
 
 /*
-NewFastAGI starts listening and serve AGI network calls
+NewFastAGI starts listening and serve AGI network calls.
 
 Usage example:
-
+```go
 	import (
-		"github.com/staskobzar/goagi"
-		"log"
-	)
+    	"github.com/staskobzar/goagi"
+		"time"
+    	"log"
+    )
 
-	// listen and serve
-	err := NewFastAGI(":8000", myAgiProc)
-	if err != nil {
-		log.Fatalln(err)
-	}
+	func main() {
+		// listen, serve and reconnect on fail
+		for {
+			fagi, err := goagi.NewFastAGI(":8000")
+			if err != nil {
+				log.Println("Connection error. Re-try in 3 sec.")
+				<-time.After(time.Second * 3)
+				continue
+			}
 
-	// callback function
-	// net accepted connection will be closed with the callback function returns
-	func myAgiProc(agi *AGI) {
-		agi.Verbose("New AGI session.")
-		agi.Answer()
-		clid, err := agi.GetVariable("CALLERID")
-		if err != nil {
-			log.Fatalln(err)
+			for agi := range fagi.Conn() {
+				agi.Verbose("New FastAGI session")
+				agi.Answer()
+				if clid, err := agi.GetVariable("CALLERID"); err == nil {
+					log.Printf("CallerID %s\n", clid)
+					ag.Varbose("Call from " + clid)
+				}
+			}
+			if agi.Err() != nil {
+				fmt.Printf("Error: %s\n", agi.Err())
+			}
 		}
-		agi.Verbose("Call from " + clid)
 	}
+```
 */
-func NewFastAGI(listenAddr string, callback callbackFunc) error {
+func NewFastAGI(listenAddr string) (*FastAGI, error) {
 	ln, err := net.Listen("tcp", listenAddr)
 	if err != nil {
-		return err
+		return nil, err
 	}
+	ch := make(chan *AGI)
+	fagi := &FastAGI{ln: ln, ch: ch}
 
-	for {
-		conn, err := ln.Accept()
-		if err != nil {
-			return err
+	go func(fastagi *FastAGI) {
+		for {
+			conn, err := ln.Accept()
+			if err != nil {
+				fastagi.setErr(err)
+				return
+			}
+
+			in := bufio.NewWriter(conn)
+			out := bufio.NewReader(conn)
+			agi, err := newInterface(bufio.NewReadWriter(out, in))
+			if err != nil {
+				fastagi.setErr(err)
+				return
+			}
+			fastagi.mu.Lock()
+			if fastagi.err == nil {
+				fastagi.ch <- agi
+			}
+			fastagi.mu.Unlock()
 		}
-
-		in := bufio.NewWriter(conn)
-		out := bufio.NewReader(conn)
-		agi, err := newInterface(bufio.NewReadWriter(out, in))
-		if err != nil {
-			return err
-		}
-
-		go func(agi *AGI, conn net.Conn) {
-			defer conn.Close()
-			callback(agi)
-		}(agi, conn)
-	}
+	}(fagi)
+	return fagi, nil
 }
