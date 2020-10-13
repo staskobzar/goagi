@@ -8,8 +8,9 @@ package main
 
 import (
 	"fmt"
-	"github.com/staskobzar/goagi"
 	"log"
+
+	"github.com/staskobzar/goagi"
 )
 
 var tests, fail, pass int
@@ -66,8 +67,11 @@ func fastAgiMain(agi *goagi.AGI) {
 }
 
 func main() {
-	err := goagi.NewFastAGI(":4573", fastAgiMain)
+	fagi, err := goagi.NewFastAGI("127.0.0.1:4573")
 	if err != nil {
 		log.Fatalln(err)
 	}
+
+	fastAgiMain(<-fagi.Conn())
+	fagi.Close()
 }

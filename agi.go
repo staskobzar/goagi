@@ -89,6 +89,7 @@ func (fagi *FastAGI) setErr(err error) {
 NewFastAGI starts listening and serve AGI network calls.
 
 Usage example:
+
 ```go
 	import (
     	"github.com/staskobzar/goagi"
