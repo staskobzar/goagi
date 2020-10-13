@@ -485,7 +485,9 @@ func NewFastAGI(listenAddr string) (*FastAGI, error)
 ```
 NewFastAGI starts listening and serve AGI network calls.
 
-Usage example: ```go
+Usage example: 
+
+```go
 
     	import (
         	"github.com/staskobzar/goagi"
