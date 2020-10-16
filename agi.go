@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"net"
 	"os"
-	"sync"
 )
 
 /*
@@ -54,35 +53,23 @@ func NewAGI() (*AGI, error) {
 
 // FastAGI defines sturcture of fast AGI server
 type FastAGI struct {
-	mu  sync.Mutex
-	ch  chan *AGI
-	ln  net.Listener
-	err error
+	agi  *AGI
+	conn net.Conn
 }
 
 // Conn returns AGI instance on every Asterisk connection
-func (fagi *FastAGI) Conn() <-chan *AGI {
-	return fagi.ch
-}
-
-// Err sets error on Fast AGI processing error
-func (fagi *FastAGI) Err() error {
-	fagi.mu.Lock()
-	err := fagi.err
-	fagi.mu.Unlock()
-	return err
+func (fagi *FastAGI) AGI() *AGI {
+	return fagi.agi
 }
 
 // Close terminates Fast AGI
 func (fagi *FastAGI) Close() {
-	fagi.ln.Close()
-	close(fagi.ch)
+	fagi.conn.Close()
 }
 
-func (fagi *FastAGI) setErr(err error) {
-	fagi.mu.Lock()
-	fagi.err = err
-	fagi.mu.Unlock()
+// RemoteAddr returns remote connected client host and port as string
+func (fagi *FastAGI) RemoteAddr() string {
+	return fagi.conn.RemoteAddr().String()
 }
 
 /*
@@ -98,43 +85,52 @@ Usage example:
     )
 
 	func main() {
+		serve := func (fagi *goagi.FastAGI) {
+			agi := fagi.AGI()
+			agi.Verbose("New FastAGI session")
+			agi.Answer()
+			if clid, err := agi.GetVariable("CALLERID"); err == nil {
+				log.Printf("CallerID %s\n", clid)
+				ag.Varbose("Call from " + clid)
+			}
+			fagi.Close()
+		}
 		// listen, serve and reconnect on fail
 		for {
-			fagi, err := goagi.NewFastAGI(":8000")
+			ln, err := net.Listen("tcp", "127.0.0.1:4573")
 			if err != nil {
 				log.Println("Connection error. Re-try in 3 sec.")
 				<-time.After(time.Second * 3)
 				continue
 			}
+			chFagi, chErr := goagi.NewFastAGI(ln)
 
-			for agi := range fagi.Conn() {
-				agi.Verbose("New FastAGI session")
-				agi.Answer()
-				if clid, err := agi.GetVariable("CALLERID"); err == nil {
-					log.Printf("CallerID %s\n", clid)
-					ag.Varbose("Call from " + clid)
+		Loop:
+			for {
+				select {
+				case fagi := <-chFagi:
+					go serve(fagi)
+				case err :=<-chErr:
+					ln.Close()
+					log.Println(err)
+					break Loop
 				}
-			}
-			if agi.Err() != nil {
-				fmt.Printf("Error: %s\n", agi.Err())
 			}
 		}
 	}
 ```
 */
-func NewFastAGI(listenAddr string) (*FastAGI, error) {
-	ln, err := net.Listen("tcp", listenAddr)
-	if err != nil {
-		return nil, err
-	}
-	ch := make(chan *AGI)
-	fagi := &FastAGI{ln: ln, ch: ch}
+func NewFastAGI(ln net.Listener) (<-chan *FastAGI, <-chan error) {
+	chFagi := make(chan *FastAGI)
+	chErr := make(chan error)
 
-	go func(fastagi *FastAGI) {
+	go func(chFagi chan *FastAGI, chErr chan error) {
+		defer close(chFagi)
+		defer close(chErr)
 		for {
 			conn, err := ln.Accept()
 			if err != nil {
-				fastagi.setErr(err)
+				chErr <- err
 				return
 			}
 
@@ -142,15 +138,13 @@ func NewFastAGI(listenAddr string) (*FastAGI, error) {
 			out := bufio.NewReader(conn)
 			agi, err := newInterface(bufio.NewReadWriter(out, in))
 			if err != nil {
-				fastagi.setErr(err)
-				return
+				// invalid input data. skip
+				conn.Close()
+				continue
 			}
-			fastagi.mu.Lock()
-			if fastagi.err == nil {
-				fastagi.ch <- agi
-			}
-			fastagi.mu.Unlock()
+			fagi := &FastAGI{agi: agi, conn: conn}
+			chFagi <- fagi
 		}
-	}(fagi)
-	return fagi, nil
+	}(chFagi, chErr)
+	return chFagi, chErr
 }

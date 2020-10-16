@@ -59,21 +59,26 @@ func TestNewFastAGI(t *testing.T) {
 		"agi_arg_2: bar=123\n" +
 		"\n"
 
-	fagi, err := NewFastAGI("127.0.0.1:0")
-
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	assert.Nil(t, err)
+	conn, err := net.Dial("tcp", ln.Addr().String())
 	assert.Nil(t, err)
 
-	conn, err := net.Dial("tcp", fagi.ln.Addr().String())
-	assert.Nil(t, err)
+	chFagi, chErr := NewFastAGI(ln)
 
 	fmt.Fprintf(conn, input)
-	agi := <-fagi.Conn()
+
+	fagi := <-chFagi
+	agi := fagi.AGI()
 
 	assert.Equal(t, "SIP/2222@default-00000023", agi.Env("channel"))
 	fmt.Fprintf(conn, "200 result=1\n")
 	err = agi.Verbose("Accept new connection.")
 	assert.Nil(t, err)
 
-	assert.Nil(t, fagi.Err())
 	fagi.Close()
+
+	ln.Close()
+	err = <-chErr
+	assert.NotNil(t, err)
 }

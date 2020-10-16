@@ -16,14 +16,6 @@ import "github.com/staskobzar/goagi"
 ```
 
 ## Usage FastAGI
-```go
-var (
-	// error returned when AGI environment header is not valid
-	EInvalEnv = errorNew("Invalid AGI env variable")
-	// error returned when response read is timed out
-	ERespTout = errorNew("Response receive timeout")
-)
-```
 
 ```go
 var (
@@ -32,6 +24,67 @@ var (
 	// EHangUp error when HANGUP signal received
 	EHangUp = errorNew("HANGUP")
 )
+```
+
+```go
+var (
+	// error returned when AGI environment header is not valid
+	EInvalEnv = errorNew("Invalid AGI env variable")
+)
+```
+
+#### func  NewFastAGI
+
+```go
+func NewFastAGI(ln net.Listener) (<-chan *FastAGI, <-chan error)
+```
+NewFastAGI starts listening and serve AGI network calls.
+
+Usage example:
+
+```go
+
+    	import (
+        	"github.com/staskobzar/goagi"
+    		"time"
+        	"log"
+        )
+
+    	func main() {
+    		serve := func (fagi *goagi.FastAGI) {
+    			agi := fagi.AGI()
+    			agi.Verbose("New FastAGI session")
+    			agi.Answer()
+    			if clid, err := agi.GetVariable("CALLERID"); err == nil {
+    				log.Printf("CallerID %s\n", clid)
+    				ag.Varbose("Call from " + clid)
+    			}
+					fagi.Close()
+    		}
+    		// listen, serve and reconnect on fail
+    		for {
+    			ln, err := net.Listen("tcp", "127.0.0.1:4573")
+    			if err != nil {
+    				log.Println("Connection error. Re-try in 3 sec.")
+    				<-time.After(time.Second * 3)
+    				continue
+    			}
+    			chFagi, chErr := goagi.NewFastAGI(ln)
+
+    		Loop:
+    			for {
+    				select {
+    				case fagi := <-chFagi:
+							go serve(fagi)
+    				case err :=<-chErr:
+    					ln.Close()
+    					log.Println(err)
+    					break Loop
+    				}
+    			}
+    		}
+    	}
+
 ```
 
 #### type AGI
@@ -478,48 +531,12 @@ type FastAGI struct {
 
 FastAGI defines sturcture of fast AGI server
 
-#### func  NewFastAGI
+#### func (*FastAGI) AGI
 
 ```go
-func NewFastAGI(listenAddr string) (*FastAGI, error)
+func (fagi *FastAGI) AGI() *AGI
 ```
-NewFastAGI starts listening and serve AGI network calls.
-
-Usage example: 
-
-```go
-
-    	import (
-        	"github.com/staskobzar/goagi"
-    		"time"
-        	"log"
-        )
-
-    	func main() {
-    		// listen, serve and reconnect on fail
-    		for {
-    			fagi, err := goagi.NewFastAGI(":8000")
-    			if err != nil {
-    				log.Println("Connection error. Re-try in 3 sec.")
-    				<-time.After(time.Second * 3)
-    				continue
-    			}
-
-    			for agi := range fagi.Conn() {
-    				agi.Verbose("New FastAGI session")
-    				agi.Answer()
-    				if clid, err := agi.GetVariable("CALLERID"); err == nil {
-    					log.Printf("CallerID %s\n", clid)
-    					ag.Varbose("Call from " + clid)
-    				}
-    			}
-    			if agi.Err() != nil {
-    				fmt.Printf("Error: %s\n", agi.Err())
-    			}
-    		}
-    	}
-
-```
+Conn returns AGI instance on every Asterisk connection
 
 #### func (*FastAGI) Close
 
@@ -527,17 +544,3 @@ Usage example:
 func (fagi *FastAGI) Close()
 ```
 Close terminates Fast AGI
-
-#### func (*FastAGI) Conn
-
-```go
-func (fagi *FastAGI) Conn() <-chan *AGI
-```
-Conn returns AGI instance on every Asterisk connection
-
-#### func (*FastAGI) Err
-
-```go
-func (fagi *FastAGI) Err() error
-```
-Err sets error on Fast AGI processing error

@@ -515,9 +515,14 @@ func (agi *AGI) Verbose(msg string, level ...int) error {
 	msg = fmt.Sprintf("\"%s\"", msg)
 	if level == nil {
 		_, err = agi.execute("VERBOSE", msg)
-	} else {
-		_, err = agi.execute("VERBOSE", msg, level)
+		return err
 	}
+
+	lvl := level[0]
+	if lvl < 1 && lvl > 4 {
+		lvl = 1
+	}
+	_, err = agi.execute("VERBOSE", msg, lvl)
 	return err
 }
 

@@ -9,6 +9,8 @@ package main
 import (
 	"fmt"
 	"log"
+	"net"
+	"time"
 
 	"github.com/staskobzar/goagi"
 )
@@ -24,7 +26,9 @@ func checkResult(err error) {
 	}
 }
 
-func fastAgiMain(agi *goagi.AGI) {
+func fastAgiMain(fagi *goagi.FastAGI) {
+	agi := fagi.AGI()
+
 	verb := func(msg string, args ...interface{}) {
 		if err := agi.Verbose(fmt.Sprintf(msg, args...)); err != nil {
 			log.Fatalln(err)
@@ -64,14 +68,28 @@ func fastAgiMain(agi *goagi.AGI) {
 	verb("%d tests completed, %d passed, %d failed", tests, pass, fail)
 	verb("==================================================")
 
+	fagi.Close()
 }
 
 func main() {
-	fagi, err := goagi.NewFastAGI("127.0.0.1:4573")
-	if err != nil {
-		log.Fatalln(err)
-	}
+	for {
+		ln, err := net.Listen("tcp", "127.0.0.1:4575")
+		if err != nil {
+			log.Printf("Listen fail: %s", err)
+			log.Println("Re-connect in 3 seconds.")
+			<-time.After(time.Second * 3)
+		}
+		chFagi, chErr := goagi.NewFastAGI(ln)
 
-	fastAgiMain(<-fagi.Conn())
-	fagi.Close()
+	Loop:
+		for {
+			select {
+			case fagi := <-chFagi:
+				go fastAgiMain(fagi)
+			case err := <-chErr:
+				log.Printf("Error: %s\n", err)
+				break Loop
+			}
+		}
+	}
 }
