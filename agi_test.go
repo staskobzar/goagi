@@ -76,6 +76,8 @@ func TestNewFastAGI(t *testing.T) {
 	err = agi.Verbose("Accept new connection.")
 	assert.Nil(t, err)
 
+	assert.Equal(t, fagi.RemoteAddr(), conn.LocalAddr().String())
+
 	fagi.Close()
 
 	ln.Close()
