@@ -63,8 +63,8 @@ func (fagi *FastAGI) AGI() *AGI {
 }
 
 // Close terminates Fast AGI
-func (fagi *FastAGI) Close() {
-	fagi.conn.Close()
+func (fagi *FastAGI) Close() error {
+	return fagi.conn.Close()
 }
 
 // RemoteAddr returns remote connected client host and port as string
