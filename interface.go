@@ -8,9 +8,10 @@ import (
 
 // AGI interface structure
 type AGI struct {
-	env map[string]string
-	arg []string
-	io  *bufio.ReadWriter
+	env    map[string]string
+	arg    []string
+	hangup bool
+	io     *bufio.ReadWriter
 }
 
 var (
@@ -19,7 +20,12 @@ var (
 )
 
 func newInterface(iodev *bufio.ReadWriter) (*AGI, error) {
-	agi := &AGI{make(map[string]string), make([]string, 0), iodev}
+	agi := &AGI{
+		env:    make(map[string]string),
+		arg:    make([]string, 0),
+		hangup: false,
+		io:     iodev,
+	}
 	scanner := bufio.NewScanner(iodev)
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -93,6 +99,16 @@ func (agi *AGI) read() (chan string, chan error) {
 		if err != nil {
 			chErr <- err
 			return
+		}
+		// TODO: read ignore HANGUP or set agi var
+		if strings.HasPrefix(str, "HANGUP") {
+			str, err := agi.io.ReadString('\n')
+			agi.hangup = true // set AGI Hangup flag
+			if err != nil {
+				chErr <- err
+				return
+			}
+			chStr <- str
 		}
 		if !strings.HasPrefix(str, "520-") {
 			chStr <- str

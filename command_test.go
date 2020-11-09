@@ -401,6 +401,25 @@ func TestCmdGetVariableFail(t *testing.T) {
 	assert.NotNil(t, err)
 }
 
+// command GoSub
+func TestCmdGoSubOk(t *testing.T) {
+	resp := "200 result=1\n"
+	rw := dummyReadWrite(resp)
+	agi := &AGI{io: rw}
+	ok, err := agi.GoSub("sub-default", "s", "1", "")
+	assert.Nil(t, err)
+	assert.True(t, ok)
+}
+
+func TestCmdGoSubFail(t *testing.T) {
+	resp := "200 result=-1\n"
+	rw := dummyReadWrite(resp)
+	agi := &AGI{io: rw}
+	ok, err := agi.GoSub("sub-default", "s", "1", "")
+	assert.NotNil(t, err)
+	assert.False(t, ok)
+}
+
 // command Hangup
 func TestCmdHangupOk(t *testing.T) {
 	resp := "200 result=1\n"

@@ -1,8 +1,9 @@
 package goagi
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestRespOkZero(t *testing.T) {
@@ -238,7 +239,7 @@ func TestRespHangup(t *testing.T) {
 	r, err := parseResponse(str)
 	assert.NotNil(t, err)
 	assert.Equal(t, err, EHangUp)
-	assert.EqualValues(t, -1, r.result)
+	assert.EqualValues(t, 1, r.result)
 	assert.EqualValues(t, -1, r.endpos)
 	assert.Equal(t, "", r.value)
 	assert.Equal(t, "", r.data)

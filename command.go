@@ -139,6 +139,7 @@ func (agi *AGI) DatabasePut(family, key, val string) (bool, error) {
 
 // Exec executes application with given options.
 func (agi *AGI) Exec(app, opts string) (int, error) {
+	opts = `"` + opts + `"`
 	resp, err := agi.execute("EXEC", app, opts)
 	if err != nil {
 		return -1, err
@@ -217,6 +218,31 @@ func (agi *AGI) GetVariable(name string) (string, error) {
 	}
 
 	return resp.value, nil
+}
+
+// GetVariable Gets a channel variable.
+func (agi *AGI) GoSub(ctx, ext, prio, args string) (bool, error) {
+	resp, err := agi.execute("GOSUB", ctx, ext, prio, args)
+	if err != nil {
+		return false, err
+	}
+	if resp.result == -1 {
+		return false, errorNew("Failed Gosub")
+	}
+	if resp.result == 0 && resp.code == 100 {
+		chStr, chErr := agi.read()
+		select {
+		case str := <-chStr:
+			resp, err = parseResponse(str)
+			if err != nil {
+				return false, err
+			}
+			return resp.code == 200, nil
+		case err := <-chErr:
+			return false, err
+		}
+	}
+	return true, nil
 }
 
 // Hangup a channel.

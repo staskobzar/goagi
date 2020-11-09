@@ -30,6 +30,7 @@ func parseResponse(text string) (*agiResp, error) {
 	lex := &lexer{input: text}
 
 	if lex.lookForward("HANGUP\n") {
+		resp.result = 1
 		return resp, EHangUp
 	}
 
