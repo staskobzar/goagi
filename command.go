@@ -2,6 +2,7 @@ package goagi
 
 import (
 	"fmt"
+	"regexp"
 )
 
 // Command sends command as string to the AGI and returns response valus with
@@ -158,11 +159,18 @@ func (agi *AGI) GetData(file string, args ...interface{}) (digit string, timeout
 	if err != nil {
 		return "", false, err
 	}
+	re := regexp.MustCompile(`200 result=([\d*]+)`)
+	result := re.FindStringSubmatch(resp.raw)
+
+	if len(result) > 1 {
+		return result[1], false, nil
+	}
+
 	if resp.result < 0 {
 		return "", false, errorNew("Failed get data.")
 	}
 	timeout = resp.value == "timeout"
-	digit = string(resp.result)
+	digit = "" //string(resp.result)
 	return
 }
 
