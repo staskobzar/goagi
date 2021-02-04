@@ -14,7 +14,6 @@ const rwDefaultTimeout = time.Second * 1
 // Reader interface for AGI object. Can be net.Conn, os.File or crafted
 type Reader interface {
 	Read(b []byte) (int, error)
-	SetReadDeadline(t time.Time) error
 }
 
 // Writer interface for AGI object. Can be net.Conn, os.File or crafted
@@ -45,7 +44,7 @@ type AGI struct {
 	writer   Writer
 	isHUP    bool
 	debugger Debugger
-	rwtout   time.Duration
+	wrtout   time.Duration
 }
 
 const (
@@ -110,7 +109,7 @@ func New(r Reader, w Writer, dbg Debugger) (*AGI, error) {
 		reader:   r,
 		writer:   w,
 		debugger: dbg,
-		rwtout:   rwDefaultTimeout,
+		wrtout:   rwDefaultTimeout,
 	}
 	agi.dbg("[>] New AGI")
 	sessData, err := agi.sessionInit()
@@ -143,10 +142,6 @@ func (agi *AGI) sessionInit() ([]string, error) {
 	data := make([]string, 0)
 
 	for {
-		tout := time.Now().Add(agi.rwtout)
-		if err := agi.reader.SetReadDeadline(tout); err != nil {
-			return nil, err
-		}
 		line, err := buf.ReadString('\n')
 		if err != nil {
 			return nil, err
@@ -169,22 +164,13 @@ func (agi *AGI) dbg(pattern string, vargs ...interface{}) {
 
 // low level response from device and response as string, matched response
 // code, true if channel reported as hangup and error.
-// if timeout > 0 then will read with timeout
-func (agi *AGI) read(timeout time.Duration) (resp string, code int, err error) {
+func (agi *AGI) read() (resp string, code int, err error) {
 	agi.dbg("[>] readResponse")
 	buf := bufio.NewReader(agi.reader)
 	var builder strings.Builder
 	moreInputExpected := false
 
 	for {
-		if timeout > 0 {
-			tout := time.Now().Add(timeout)
-			if fail := agi.reader.SetReadDeadline(tout); fail != nil {
-				err = fail
-				return
-			}
-		}
-
 		line, fail := buf.ReadString('\n')
 		if fail != nil {
 			err = fail
@@ -236,9 +222,9 @@ func matchCode(data string) (int, bool) {
 
 func (agi *AGI) write(command []byte) error {
 	agi.dbg("[>] readResponse")
-	if agi.rwtout > 0 {
-		tout := time.Now().Add(agi.rwtout)
-		agi.dbg(" [v] set write timeout: %dns", tout)
+	if agi.wrtout > 0 {
+		tout := time.Now().Add(agi.wrtout)
+		agi.dbg(" [v] set write timeout at: %s", tout)
 
 		if err := agi.writer.SetWriteDeadline(tout); err != nil {
 			return err
@@ -255,19 +241,13 @@ func (agi *AGI) write(command []byte) error {
 }
 
 // write command, read and parse response
-func (agi *AGI) execute(cmd string, timeout bool) (Response, error) {
+func (agi *AGI) execute(cmd string) (Response, error) {
 	agi.dbg("[>] execute cmd: %q", cmd)
 	if err := agi.write([]byte(cmd)); err != nil {
 		return nil, err
 	}
 
-	var tout time.Duration
-	if timeout {
-		tout = agi.rwtout
-	}
-	agi.dbg(" [v] read timeout=%d", tout)
-
-	resp, code, err := agi.read(tout)
+	resp, code, err := agi.read()
 	if err != nil {
 		return nil, err
 	}

@@ -16,12 +16,6 @@ import (
 
 type stubReader struct {
 	io.Reader
-	tout int64
-}
-
-func (r *stubReader) SetReadDeadline(t time.Time) error {
-	r.tout = t.Sub(time.Now()).Milliseconds()
-	return nil
 }
 
 type stubWriter struct {
@@ -66,7 +60,7 @@ func TestNew(t *testing.T) {
 	input += "\n\n"
 	logBuffer := new(bytes.Buffer)
 	logger := log.New(logBuffer, "agi: ", log.Lmicroseconds)
-	reader := &stubReader{strings.NewReader(input), 0}
+	reader := &stubReader{strings.NewReader(input)}
 	writer := &stubWriter{ioutil.Discard, 0}
 
 	agi, err := New(reader, writer, logger)
@@ -115,19 +109,6 @@ func TestNewNetPipe(t *testing.T) {
 	assert.Equal(t, 2, len(agi.EnvArgs()))
 }
 
-func TestSessionInitTimeout(t *testing.T) {
-	stdin, writer, err := os.Pipe()
-	assert.Nil(t, err)
-	agi := &AGI{reader: stdin}
-	input := strings.Join(agiSetupInput, "\n")
-
-	// write without terminating \n to simulate timeout
-	writer.WriteString(input)
-	_, err = agi.sessionInit()
-	assert.NotNil(t, err)
-	assert.Contains(t, err.Error(), "timeout")
-}
-
 func TestSessionInitDeviceFail(t *testing.T) {
 	stdin, _, err := os.Pipe()
 	assert.Nil(t, err)
@@ -154,10 +135,10 @@ func TestReadResponse(t *testing.T) {
 
 	// run tests
 	for _, test := range tests {
-		reader := &stubReader{strings.NewReader(test.input), 0}
+		reader := &stubReader{strings.NewReader(test.input)}
 		agi := &AGI{reader: reader}
 
-		res, code, err := agi.read(0)
+		res, code, err := agi.read()
 		assert.Nil(t, err, test.input)
 		assert.Equal(t, test.input, res)
 		assert.Equal(t, test.code, code, test.input)
@@ -166,9 +147,9 @@ func TestReadResponse(t *testing.T) {
 }
 
 func TestReadResponseWithHangup(t *testing.T) {
-	reader := &stubReader{strings.NewReader("HANGUP\n200 result=1\n"), 0}
+	reader := &stubReader{strings.NewReader("HANGUP\n200 result=1\n")}
 	agi := &AGI{reader: reader}
-	res, code, err := agi.read(0)
+	res, code, err := agi.read()
 	assert.Nil(t, err)
 	assert.Equal(t, "200 result=1\n", res)
 	assert.Equal(t, codeSucc, code)
@@ -184,9 +165,9 @@ func TestReadResponseLongError520(t *testing.T) {
 		"is set and returns the variable in parentheses.\n" +
 		"Example return code: 200 result=1 (testvariable)\n" +
 		"520 End of proper usage.\n"
-	reader := &stubReader{strings.NewReader(input), 0}
+	reader := &stubReader{strings.NewReader(input)}
 	agi := &AGI{reader: reader}
-	res, code, err := agi.read(0)
+	res, code, err := agi.read()
 	assert.Nil(t, err)
 	assert.Equal(t, input[7:], res)
 	assert.Equal(t, codeE520, code)
@@ -209,9 +190,9 @@ func TestReadResponseGarbage(t *testing.T) {
 	}
 
 	for _, input := range tests {
-		reader := &stubReader{strings.NewReader(input), 0}
+		reader := &stubReader{strings.NewReader(input)}
 		agi := &AGI{reader: reader}
-		_, code, err := agi.read(0)
+		_, code, err := agi.read()
 		assert.NotNil(t, err)
 		assert.Contains(t, err.Error(), "Invalid input")
 		assert.Zero(t, code)
@@ -223,29 +204,7 @@ func TestReadResponseFail(t *testing.T) {
 	assert.Nil(t, err)
 	agi := &AGI{reader: stdin}
 	stdin.Close()
-	_, _, err = agi.read(0)
-	assert.NotNil(t, err)
-	assert.Contains(t, err.Error(), "closed")
-}
-
-func TestReadResponseTimeout(t *testing.T) {
-	stdin, writer, err := os.Pipe()
-	assert.Nil(t, err)
-	agi := &AGI{reader: stdin}
-
-	// write without terminating \n to simulate timeout
-	writer.WriteString("foo bar")
-	_, _, err = agi.read(time.Millisecond * 100)
-	assert.NotNil(t, err)
-	assert.Contains(t, err.Error(), "timeout")
-
-	writer.WriteString("HANGUP\nfoo bar")
-	_, _, err = agi.read(time.Millisecond * 100)
-	assert.NotNil(t, err)
-	assert.Contains(t, err.Error(), "timeout")
-
-	stdin.Close()
-	_, _, err = agi.read(time.Millisecond * 100)
+	_, _, err = agi.read()
 	assert.NotNil(t, err)
 	assert.Contains(t, err.Error(), "closed")
 }
@@ -279,7 +238,7 @@ func TestWriteNetConn(t *testing.T) {
 
 func TestWriteTimeout(t *testing.T) {
 	_, writer := net.Pipe()
-	agi := &AGI{writer: writer, rwtout: time.Millisecond * 100}
+	agi := &AGI{writer: writer, wrtout: time.Millisecond * 100}
 
 	err := agi.write([]byte("NOOP\n"))
 	assert.NotNil(t, err)
@@ -288,7 +247,7 @@ func TestWriteTimeout(t *testing.T) {
 
 func TestWriteFailSetTimeout(t *testing.T) {
 	_, writer := net.Pipe()
-	agi := &AGI{writer: writer, rwtout: time.Millisecond * 100}
+	agi := &AGI{writer: writer, wrtout: time.Millisecond * 100}
 
 	writer.Close()
 	err := agi.write([]byte("NOOP\n"))
@@ -309,23 +268,22 @@ func TestWriteFail(t *testing.T) {
 
 func TestExecute(t *testing.T) {
 	buf, reader, writer := stubReaderWriter("200 result=1")
-	agi := &AGI{reader: reader, writer: writer, rwtout: rwDefaultTimeout * 5}
-	resp, err := agi.execute("NOOP\n", true)
+	agi := &AGI{reader: reader, writer: writer, wrtout: rwDefaultTimeout * 5}
+	resp, err := agi.execute("NOOP\n")
 	assert.Nil(t, err)
 	assert.Equal(t, "NOOP\n", buf.String())
 	assert.Equal(t, 200, resp.Code())
 	assert.Equal(t, 1, resp.Result())
-	assert.True(t, reader.tout > 4000)
 	assert.True(t, writer.tout > 4000)
 
-	resp, err = agi.execute("HANGUP\n", false)
+	resp, err = agi.execute("HANGUP\n")
 	assert.NotNil(t, err)
 	assert.Nil(t, resp)
 
 	_, wr := net.Pipe()
 	agi.writer = wr
 	wr.Close()
-	resp, err = agi.execute("HANGUP\n", false)
+	resp, err = agi.execute("HANGUP\n")
 	assert.NotNil(t, err)
 	assert.Contains(t, err.Error(), "closed")
 }

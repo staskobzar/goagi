@@ -7,20 +7,20 @@ import (
 // Command sends command as string to the AGI and returns response valus with
 // text response
 func (agi *AGI) Command(cmd string) (Response, error) {
-	return agi.execute(cmd+"\n", false)
+	return agi.execute(cmd + "\n")
 }
 
 // Answer executes AGI command "ANSWER"
 // Answers channel if not already in answer state.
 func (agi *AGI) Answer() (Response, error) {
-	return agi.execute("ANSWER\n", true)
+	return agi.execute("ANSWER\n")
 }
 
 // AsyncAGIBreak Interrupts Async AGI
 //	Interrupts expected flow of Async AGI commands and returns control
 // to previous source (typically, the PBX dialplan).
 func (agi *AGI) AsyncAGIBreak() (Response, error) {
-	return agi.execute("ASYNCAGI BREAK\n", true)
+	return agi.execute("ASYNCAGI BREAK\n")
 }
 
 // ChannelStatus returns status of the connected channel.
@@ -38,7 +38,7 @@ func (agi *AGI) AsyncAGIBreak() (Response, error) {
 //	7 - Line is busy.
 func (agi *AGI) ChannelStatus(channel string) (Response, error) {
 	cmd := fmt.Sprintf("CHANNEL STATUS %s\n", channel)
-	return agi.execute(cmd, true)
+	return agi.execute(cmd)
 }
 
 // ControlStreamFile sends audio file on channel and allows the listener
@@ -64,20 +64,20 @@ func (agi *AGI) ControlStreamFile(filename, digits string, args ...string) (Resp
 	}
 
 	cmd = fmt.Sprintf("%s\n", cmd)
-	return agi.execute(cmd, false)
+	return agi.execute(cmd)
 }
 
 // DatabaseDel deletes an entry in the Asterisk database for a given family and key.
 //	Returns status and error if fails.
 func (agi *AGI) DatabaseDel(family, key string) (Response, error) {
 	cmd := fmt.Sprintf("DATABASE DEL %s %s\n", family, key)
-	return agi.execute(cmd, true)
+	return agi.execute(cmd)
 }
 
 // DatabaseDelTree deletes a family or specific keytree within a family in the Asterisk database.
 func (agi *AGI) DatabaseDelTree(family, keytree string) (Response, error) {
 	cmd := fmt.Sprintf("DATABASE DELTREE %s %s\n", family, keytree)
-	return agi.execute(cmd, true)
+	return agi.execute(cmd)
 }
 
 // DatabaseGet Retrieves an entry in the Asterisk database for a given family and key.
@@ -85,20 +85,20 @@ func (agi *AGI) DatabaseDelTree(family, keytree string) (Response, error) {
 //  Response.Value() for result
 func (agi *AGI) DatabaseGet(family, key string) (Response, error) {
 	cmd := fmt.Sprintf("DATABASE GET %s %s\n", family, key)
-	return agi.execute(cmd, true)
+	return agi.execute(cmd)
 }
 
 // DatabasePut adds or updates an entry in the Asterisk database for
 // a given family, key, and value.
 func (agi *AGI) DatabasePut(family, key, val string) (Response, error) {
 	cmd := fmt.Sprintf("DATABASE PUT %s %s %s\n", family, key, val)
-	return agi.execute(cmd, true)
+	return agi.execute(cmd)
 }
 
 // Exec executes application with given options.
 func (agi *AGI) Exec(app, opts string) (Response, error) {
 	cmd := fmt.Sprintf("EXEC %s %q\n", app, opts)
-	return agi.execute(cmd, true)
+	return agi.execute(cmd)
 }
 
 // GetData Stream the given file, and receive DTMF data.
@@ -112,7 +112,7 @@ func (agi *AGI) Exec(app, opts string) (Response, error) {
 // input with "#"
 func (agi *AGI) GetData(file string, timeout, maxdigit int) (Response, error) {
 	cmd := fmt.Sprintf("GET DATA %s %d %d\n", file, timeout, maxdigit)
-	resp, err := agi.execute(cmd, false)
+	resp, err := agi.execute(cmd)
 	if err != nil {
 		return nil, err
 	}
@@ -135,7 +135,7 @@ func (agi *AGI) GetFullVariable(name, channel string) (Response, error) {
 	} else {
 		cmd = fmt.Sprintf("%s %s %s\n", cmd, name, channel)
 	}
-	return agi.execute(cmd, true)
+	return agi.execute(cmd)
 }
 
 // GetOption Stream file, prompt for DTMF, with timeout.
@@ -143,13 +143,13 @@ func (agi *AGI) GetFullVariable(name, channel string) (Response, error) {
 //	Returns digit pressed, offset and error
 func (agi *AGI) GetOption(filename, digits string, timeout int32) (Response, error) {
 	cmd := fmt.Sprintf("GET OPTION %s %q %d\n", filename, digits, timeout)
-	return agi.execute(cmd, false)
+	return agi.execute(cmd)
 }
 
 // GetVariable Gets a channel variable.
 func (agi *AGI) GetVariable(name string) (Response, error) {
 	cmd := fmt.Sprintf("GET VARIABLE %s\n", name)
-	return agi.execute(cmd, true)
+	return agi.execute(cmd)
 }
 
 // Hangup a channel.
@@ -162,7 +162,7 @@ func (agi *AGI) Hangup(channel ...string) (Response, error) {
 	} else {
 		cmd = fmt.Sprintf("%s\n", cmd)
 	}
-	return agi.execute(cmd, true)
+	return agi.execute(cmd)
 }
 
 // ReceiveChar Receives one character from channels supporting it.
@@ -172,14 +172,14 @@ func (agi *AGI) Hangup(channel ...string) (Response, error) {
 // Returns result -1 on error or char byte
 func (agi *AGI) ReceiveChar(timeout int) (Response, error) {
 	cmd := fmt.Sprintf("RECEIVE CHAR %d\n", timeout)
-	return agi.execute(cmd, false)
+	return agi.execute(cmd)
 }
 
 // ReceiveText Receives text from channels supporting it.
 //	timeout - The timeout to be the maximum time to wait for input in milliseconds, or 0 for infinite.
 func (agi *AGI) ReceiveText(timeout int) (Response, error) {
 	cmd := fmt.Sprintf("RECEIVE TEXT %d\n", timeout)
-	return agi.execute(cmd, false)
+	return agi.execute(cmd)
 }
 
 // RecordFile Record to a file until a given dtmf digit in the sequence is received.
@@ -209,7 +209,7 @@ func (agi *AGI) RecordFile(file, format, escDigits string,
 	}
 	cmd = fmt.Sprintf("%s\n", cmd)
 
-	resp, err := agi.execute(cmd, false)
+	resp, err := agi.execute(cmd)
 	if err != nil {
 		return nil, err
 	}
@@ -229,88 +229,88 @@ func (agi *AGI) RecordFile(file, format, escDigits string,
 // DTMF digits are received on the channel.
 func (agi *AGI) SayAlpha(number, escDigits string) (Response, error) {
 	cmd := fmt.Sprintf("SAY ALPHA %s %q\n", number, escDigits)
-	return agi.execute(cmd, false)
+	return agi.execute(cmd)
 }
 
 // SayDate say a given date, returning early if any of the given DTMF digits
 // are received on the channel
 func (agi *AGI) SayDate(date, escDigits string) (Response, error) {
 	cmd := fmt.Sprintf("SAY DATE %s %q\n", date, escDigits)
-	return agi.execute(cmd, false)
+	return agi.execute(cmd)
 }
 
 // SayDatetime say a given time, returning early if any of the given DTMF
 // digits are received on the channel
 func (agi *AGI) SayDatetime(time, escDigits, format, timezone string) (Response, error) {
 	cmd := fmt.Sprintf("SAY DATETIME %s %q %q %q\n", time, escDigits, format, timezone)
-	return agi.execute(cmd, false)
+	return agi.execute(cmd)
 }
 
 // SayDigits say a given digit string, returning early if any of the given
 // DTMF digits are received on the channel
 func (agi *AGI) SayDigits(number, escDigits string) (Response, error) {
 	cmd := fmt.Sprintf("SAY DIGITS %s %q\n", number, escDigits)
-	return agi.execute(cmd, false)
+	return agi.execute(cmd)
 }
 
 // SayNumber say a given digit string, returning early if any of the given
 // DTMF digits are received on the channel
 func (agi *AGI) SayNumber(number, escDigits string) (Response, error) {
 	cmd := fmt.Sprintf("SAY NUMBER %s %q\n", number, escDigits)
-	return agi.execute(cmd, false)
+	return agi.execute(cmd)
 }
 
 // SayPhonetic say a given character string with phonetics, returning early
 // if any of the given DTMF digits are received on the channel
 func (agi *AGI) SayPhonetic(str, escDigits string) (Response, error) {
 	cmd := fmt.Sprintf("SAY PHONETIC %s %q\n", str, escDigits)
-	return agi.execute(cmd, false)
+	return agi.execute(cmd)
 }
 
 // SayTime say a given time, returning early if any of the given DTMF digits
 // are received on the channel
 func (agi *AGI) SayTime(time, escDigits string) (Response, error) {
 	cmd := fmt.Sprintf("SAY TIME %s %q\n", time, escDigits)
-	return agi.execute(cmd, false)
+	return agi.execute(cmd)
 }
 
 // SendImage Sends the given image on a channel. Most channels do not support
 // the transmission of images.
 func (agi *AGI) SendImage(image string) (Response, error) {
 	cmd := fmt.Sprintf("SEND IMAGE %q\n", image)
-	return agi.execute(cmd, false)
+	return agi.execute(cmd)
 }
 
 // SendText Sends the given text on a channel. Most channels do not support
 // the transmission of text.
 func (agi *AGI) SendText(text string) (Response, error) {
 	cmd := fmt.Sprintf("SEND TEXT %q\n", text)
-	return agi.execute(cmd, false)
+	return agi.execute(cmd)
 }
 
 // SetAutoHangup Cause the channel to automatically hangup at time seconds in the future.
 // Setting to 0 will cause the autohangup feature to be disabled on this channel.
 func (agi *AGI) SetAutoHangup(seconds int) (Response, error) {
 	cmd := fmt.Sprintf("SET AUTOHANGUP %d\n", seconds)
-	return agi.execute(cmd, true)
+	return agi.execute(cmd)
 }
 
 // SetCallerid Changes the callerid of the current channel.
 func (agi *AGI) SetCallerid(clid string) (Response, error) {
 	cmd := fmt.Sprintf("SET CALLERID %q\n", clid)
-	return agi.execute(cmd, true)
+	return agi.execute(cmd)
 }
 
 // SetContext Sets the context for continuation upon exiting the application.
 func (agi *AGI) SetContext(ctx string) (Response, error) {
 	cmd := fmt.Sprintf("SET CONTEXT %s\n", ctx)
-	return agi.execute(cmd, true)
+	return agi.execute(cmd)
 }
 
 // SetExtension Changes the extension for continuation upon exiting the application.
 func (agi *AGI) SetExtension(ext string) (Response, error) {
 	cmd := fmt.Sprintf("SET EXTENSION %s\n", ext)
-	return agi.execute(cmd, true)
+	return agi.execute(cmd)
 }
 
 // SetMusic Enables/Disables the music on hold generator. If class is not specified,
@@ -325,27 +325,27 @@ func (agi *AGI) SetMusic(enable bool, class string) (Response, error) {
 	}
 
 	cmd = fmt.Sprintf("%s %q\n", cmd, class)
-	return agi.execute(cmd, true)
+	return agi.execute(cmd)
 }
 
 // SetPriority Changes the priority for continuation upon exiting the application.
 // The priority must be a valid priority or label.
 func (agi *AGI) SetPriority(priority string) (Response, error) {
 	cmd := fmt.Sprintf("SET PRIORITY %s\n", priority)
-	return agi.execute(cmd, true)
+	return agi.execute(cmd)
 }
 
 // SetVariable Sets a variable to the current channel.
 func (agi *AGI) SetVariable(name, value string) (Response, error) {
 	cmd := fmt.Sprintf("SET VARIABLE %s %q\n", name, value)
-	return agi.execute(cmd, true)
+	return agi.execute(cmd)
 }
 
 // StreamFile Send the given file, allowing playback to be interrupted by the given
 // digits, if any.
 func (agi *AGI) StreamFile(file, escDigits string, offset int) (Response, error) {
 	cmd := fmt.Sprintf("STREAM FILE %s %q %d\n", file, escDigits, offset)
-	return agi.execute(cmd, false)
+	return agi.execute(cmd)
 }
 
 // TDDMode Enable/Disable TDD transmission/reception on a channel.
@@ -358,7 +358,7 @@ func (agi *AGI) TDDMode(mode string) (Response, error) {
 	default:
 		cmd = fmt.Sprintf("%s off\n", cmd)
 	}
-	return agi.execute(cmd, false)
+	return agi.execute(cmd)
 }
 
 // Verbose Sends message to the console via verbose message system.
@@ -372,7 +372,7 @@ func (agi *AGI) Verbose(msg string, level ...int) (Response, error) {
 		}
 	}
 	cmd = fmt.Sprintf("%s %d\n", cmd, lvl)
-	return agi.execute(cmd, true)
+	return agi.execute(cmd)
 }
 
 // WaitForDigit Waits up to timeout *milliseconds* for channel to receive a DTMF digit.
@@ -380,5 +380,5 @@ func (agi *AGI) Verbose(msg string, level ...int) (Response, error) {
 //	Return digit pressed as string or error
 func (agi *AGI) WaitForDigit(timeout int) (Response, error) {
 	cmd := fmt.Sprintf("WAIT FOR DIGIT %d\n", timeout)
-	return agi.execute(cmd, false)
+	return agi.execute(cmd)
 }

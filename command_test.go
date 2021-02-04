@@ -11,7 +11,7 @@ import (
 func stubReaderWriter(response string) (*bytes.Buffer, *stubReader, *stubWriter) {
 	buf := new(bytes.Buffer)
 	response += "\n"
-	reader := &stubReader{strings.NewReader(response), 0}
+	reader := &stubReader{strings.NewReader(response)}
 	writer := &stubWriter{buf, 0}
 
 	return buf, reader, writer
@@ -19,19 +19,18 @@ func stubReaderWriter(response string) (*bytes.Buffer, *stubReader, *stubWriter)
 
 func mockAGI(response string) (*AGI, *bytes.Buffer) {
 	buf, r, w := stubReaderWriter(response)
-	return &AGI{reader: r, writer: w, rwtout: rwDefaultTimeout}, buf
+	return &AGI{reader: r, writer: w, wrtout: rwDefaultTimeout}, buf
 }
 
 const respOk = "200 result=1"
 
 func TestCmdCommand(t *testing.T) {
 	buf, r, w := stubReaderWriter(respOk)
-	agi := &AGI{reader: r, writer: w, rwtout: rwDefaultTimeout * 5}
+	agi := &AGI{reader: r, writer: w, wrtout: rwDefaultTimeout * 5}
 
 	resp, err := agi.Command("ANSWER")
 	assert.Nil(t, err)
 	assert.Equal(t, 200, resp.Code())
-	assert.EqualValues(t, 0, r.tout, "No timeout when reading")
 	assert.Equal(t, "ANSWER\n", buf.String())
 }
 
