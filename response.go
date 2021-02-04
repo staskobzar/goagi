@@ -1,251 +1,239 @@
 package goagi
 
 import (
-	"unicode"
-	"unicode/utf8"
+	"strconv"
+	"strings"
 )
 
-var (
-	// EInvalResp error returns when AGI response does not match pattern
-	EInvalResp = errorNew("Invalid AGI response")
-	// EHangUp error when HANGUP signal received
-	EHangUp = errorNew("HANGUP")
-)
+type Response interface {
+	Code() int
+	RawResponse() string
+	Result() int
+	Value() string
+	Data() string
+	EndPos() int64
+	Digit() string
+	SResults() int
+}
 
-type agiResp struct {
+type response struct {
 	code   int
-	result int32
-	endpos int32
-	value  string
-	data   string
+	result int
 	raw    string
+	data   string
 }
 
-func (resp *agiResp) isOk() bool {
-	return resp.code == 200 && resp.result == 0
+func (r *response) Code() int           { return r.code }
+func (r *response) RawResponse() string { return r.raw }
+func (r *response) Result() int         { return r.result }
+func (r *response) Value() string       { return r.data }
+func (r *response) Data() string        { return r.data }
+func (r *response) EndPos() int64       { return 0 }
+func (r *response) Digit() string       { return "" }
+func (r *response) SResults() int       { return 0 }
+
+type responseSuccess struct {
+	response
+	value    string
+	endpos   int64
+	digit    string
+	sresults int
 }
 
-func parseResponse(text string) (*agiResp, error) {
-	resp := &agiResp{result: -1, endpos: -1, raw: text}
-	lex := &lexer{input: text}
+func (r *responseSuccess) Value() string { return r.value }
+func (r *responseSuccess) EndPos() int64 { return r.endpos }
+func (r *responseSuccess) Digit() string { return r.digit }
+func (r *responseSuccess) SResults() int { return r.sresults }
 
-	if lex.lookForward("HANGUP\n") {
-		resp.result = 1
-		return resp, EHangUp
+func (agi *AGI) sessionSetup(data []string) {
+	agi.dbg("[>] sessionSetup")
+	agi.env = make(map[string]string)
+	agi.arg = make([]string, 0)
+
+	for _, line := range data {
+		idx := strings.Index(line, ": ")
+		if idx == -1 || line[:4] != "agi_" {
+			agi.dbg(" [!] ignore invalid line: %q", line)
+			continue
+		}
+		if line[:8] == "agi_arg_" {
+			arg := line[idx+2:]
+			agi.arg = append(agi.arg, arg)
+			agi.dbg(" [v] add arg: %q", arg)
+			continue
+		}
+		key, val := line[4:idx], line[idx+2:]
+		agi.dbg(" [v] add env: %s => %s", key, val)
+		agi.env[key] = val
+	}
+}
+
+// read and parse response
+func (agi *AGI) parseResponse(data string, code int) (Response, error) {
+	agi.dbg("[>] parseResponse")
+
+	if len(data) < 4 {
+		agi.dbg(" [!] response is invalid: %q", data)
+		return nil, ErrAGI.Msg("Recieved response is invalid: %q", data)
 	}
 
-	// state machine
-	for scanner, err := scanCode(lex, resp); ; scanner, err = scanner(lex, resp) {
-		if err != nil {
-			return resp, err
-		}
-		if scanner == nil {
-			break
-		}
+	if code == codeEarly {
+		return agi.parseEarlyResponse(data, code)
 	}
+
+	if code == codeSucc {
+		return agi.parseSuccessResponse(data)
+	}
+
+	if code > 500 && code < 600 {
+		return agi.parseErrorResponse(data, code)
+	}
+	return nil, ErrAGI.Msg("Can not recognize the response: %q", data)
+}
+
+func (agi *AGI) parseSuccessResponse(data string) (Response, error) {
+	agi.dbg("[>] parseSuccessResponse: %q", data)
+	resp := &responseSuccess{}
+	resp.code = codeSucc
+	resp.raw = data
+
+	data = data[4:]
+	data = trimLastNL(data)
+	data, result := scanResult(data)
+	resp.result = result
+
+	if len(data) == 0 {
+		return resp, nil
+	}
+
+	// parse value
+	data, value := parseValue(data)
+	resp.value = value
+	tokens := strings.Fields(data)
+	resp.endpos = parseEndpos(tokens)
+	resp.digit = parseDigit(tokens)
+	resp.sresults = parseSResults(tokens)
 	return resp, nil
 }
 
-// scanner routins
-type scanFunc func(*lexer, *agiResp) (scanFunc, error)
-
-func scanCode(l *lexer, resp *agiResp) (scanFunc, error) {
-	char := l.peek()
-	if !unicode.IsDigit(char) {
-		return nil, EInvalResp.withInfo("scanCode:digit expected:" + l.input)
+func parseSResults(tokens []string) int {
+	for _, tok := range tokens {
+		if len(tok) < 9 || tok[:8] != "results=" {
+			continue
+		}
+		if num, err := strconv.Atoi(tok[8:]); err == nil {
+			return num
+		}
+		return 0
 	}
-	for {
-		char = l.next()
-		if !unicode.IsDigit(char) {
-			l.backup()
-			break
+	return 0
+}
+
+func parseDigit(tokens []string) string {
+	for _, tok := range tokens {
+		if len(tok) < 7 || tok[:6] != "digit=" {
+			continue
+		}
+		return tok[6:]
+	}
+	return ""
+}
+
+func parseEndpos(tokens []string) int64 {
+	for _, tok := range tokens {
+		if len(tok) < 8 || tok[:7] != "endpos=" {
+			continue
+		}
+		if pos, err := strconv.ParseInt(tok[7:], 10, 64); err == nil {
+			return pos
+		}
+		return 0
+	}
+	return 0
+}
+
+func parseValue(data string) (string, string) {
+	if data[0] != '(' {
+		return data, ""
+	}
+	if idx := strings.IndexByte(data, ')'); idx > 0 {
+		return data[idx+1:], data[1:idx]
+	}
+	return data, ""
+}
+
+func (agi *AGI) parseEarlyResponse(data string, code int) (Response, error) {
+	agi.dbg("[>] parseEarlyResponse %d: %q", code, data)
+	resp := &response{}
+	resp.code = code
+	resp.raw = data
+
+	data = data[4:]
+	data = trimLastNL(data)
+
+	data, result := scanResult(data)
+	resp.result = result
+	resp.data = data
+
+	return resp, nil
+}
+
+func (agi *AGI) parseErrorResponse(data string, code int) (Response, error) {
+	agi.dbg("[>] parseErrorResponse %d: %q", code, data)
+	resp := &response{}
+	resp.code = code
+	resp.raw = data
+
+	if code == codeE520 && data[:4] == "520-" {
+		resp.data = scanE520Usage(data)
+		return resp, nil
+	}
+
+	data = data[4:]
+	data = trimLastNL(data)
+
+	data, result := scanResult(data)
+	resp.result = result
+	resp.data = data
+
+	return resp, nil
+}
+
+func trimLastNL(data string) string {
+	l := len(data)
+	if l > 0 && data[l-1:] == "\n" {
+		return data[:l-1]
+	}
+	return data
+}
+
+func scanResult(data string) (string, int) {
+	if len(data) < 7 || data[:7] != "result=" {
+		return data, 0
+	}
+	token := strings.SplitN(data, " ", 2)
+	resultTok := strings.SplitN(token[0], "=", 2)
+
+	if len(resultTok) > 1 {
+		if num, err := strconv.Atoi(resultTok[1]); err == nil {
+			return strings.Join(token[1:], " "), num
 		}
 	}
-	resp.code = int(l.atoi())
-	l.ignore()
-
-	if resp.code >= 500 {
-		return scanError, nil
-	}
-	return scanResult, nil
+	return strings.Join(token[1:], " "), 0
 }
 
-func scanResult(l *lexer, resp *agiResp) (scanFunc, error) {
-	pattern := "result="
-	char := l.next()
-	if char != ' ' {
-		return nil, EInvalResp.withInfo("scanResult:space expected:" + l.input)
+func scanResultStrFromRaw(data string) string {
+	raw := data[4:]
+	raw = trimLastNL(raw)
+	tokens := strings.Fields(raw)
+	if strings.Compare(tokens[0], "result=") <= 0 {
+		return ""
 	}
-	l.ignore()
-
-	if !l.lookForward(pattern) {
-		return nil, EInvalResp.withInfo("scanResult:result= expected:" + l.input)
-	}
-	l.pos += len(pattern)
-	l.ignore()
-
-	for {
-		char = l.next()
-		if unicode.IsSpace(char) || char == eof {
-			l.backup()
-			break
-		}
-	}
-	if l.start == l.pos {
-		resp.result = -3
-	} else {
-		resp.result = l.atoi()
-	}
-	return scanValue, nil
+	return tokens[0][7:]
 }
 
-func scanValue(l *lexer, resp *agiResp) (scanFunc, error) {
-	if pos := l.skipWhitespace(); pos == eof {
-		return nil, nil
-	}
-	if chr := l.peek(); chr != '(' {
-		return scanEndpos, nil
-	}
-	l.next() // skip "("
-	l.ignore()
-	for {
-		char := l.next()
-		if char == eof || char == '\n' || char == ')' {
-			l.backup()
-			break
-		}
-	}
-	resp.value = l.input[l.start:l.pos]
-	l.next()
-	l.ignore()
-	return scanEndpos, nil
-}
+func scanE520Usage(data string) string {
+	token := strings.Split(data, "\n")
 
-func scanEndpos(l *lexer, resp *agiResp) (scanFunc, error) {
-	if pos := l.skipWhitespace(); pos == eof {
-		return nil, nil
-	}
-	pattern := "endpos="
-	if !l.lookForward(pattern) {
-		return scanData, nil
-	}
-	l.pos += len(pattern)
-	l.start = l.pos
-	for {
-		if chr := l.peek(); unicode.IsSpace(chr) || chr == eof {
-			break
-		}
-		l.next()
-	}
-	resp.endpos = l.atoi()
-	return scanData, nil
-}
-
-func scanData(l *lexer, resp *agiResp) (scanFunc, error) {
-	if pos := l.skipWhitespace(); pos == eof {
-		return nil, nil
-	}
-	for {
-		char := l.next()
-		if char == eof || char == '\n' {
-			l.backup()
-			break
-		}
-	}
-	resp.data = l.input[l.start:l.pos]
-	return nil, nil
-}
-
-func scanError(l *lexer, resp *agiResp) (scanFunc, error) {
-	resp.result = -1
-	if resp.code == 520 && l.peek() == '-' {
-		return scanErrorUsage, nil
-	}
-	return scanData, nil
-}
-
-func scanErrorUsage(l *lexer, resp *agiResp) (scanFunc, error) {
-	// skip hyphen
-	l.next()
-	l.ignore()
-
-	for {
-		char := l.next()
-		if char == eof || (char == '\n' && l.lookForward("520 End")) {
-			break
-		}
-	}
-
-	resp.data = l.input[l.start:l.pos]
-	return nil, nil
-}
-
-// lexer routins
-type lexer struct {
-	input string
-	start int
-	pos   int
-	width int
-}
-
-const eof = -1
-
-func (l *lexer) peek() rune {
-	b := l.next()
-	l.backup()
-	return b
-}
-
-func (l *lexer) next() rune {
-	if l.pos >= len(l.input) {
-		l.width = 0
-		return eof
-	}
-	r, w := utf8.DecodeRuneInString(l.input[l.pos:])
-	l.width = w
-	l.pos += l.width
-	return r
-}
-
-func (l *lexer) backup() {
-	l.pos -= l.width
-}
-
-func (l *lexer) ignore() {
-	l.start = l.pos
-}
-
-func (l *lexer) lookForward(pattern string) bool {
-	pos := l.pos + len(pattern)
-	return pos <= len(l.input) && l.input[l.pos:pos] == pattern
-}
-
-func (l *lexer) skipWhitespace() int {
-	for {
-		char := l.next()
-		if char == eof {
-			return eof
-		}
-		if !unicode.IsSpace(char) {
-			l.backup()
-			break
-		}
-		l.ignore()
-	}
-	return l.pos
-}
-
-func (l *lexer) atoi() int32 {
-	s := l.input[l.start:l.pos]
-	sign := 1
-	if s[0] == '-' {
-		sign = -1
-		s = s[1:]
-	}
-	n := 0
-	for _, ch := range []byte(s) {
-		ch -= '0'
-		n = n*10 + int(ch)
-	}
-	return int32(n * sign)
+	return strings.Join(token[1:len(token)-2], "\n")
 }

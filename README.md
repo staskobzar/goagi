@@ -1,6 +1,5 @@
 # goagi: Golang library to build agi/fastagi applications
 
-[![beta](https://img.shields.io/badge/v1-BETA-orange)](https://github.com/staskobzar/goagi)
 [![Build Status](https://travis-ci.org/staskobzar/goagi.svg?branch=master)](https://travis-ci.org/staskobzar/goagi)
 [![codecov](https://codecov.io/gh/staskobzar/goagi/branch/master/graph/badge.svg)](https://codecov.io/gh/staskobzar/goagi)
 [![CodeFactor](https://www.codefactor.io/repository/github/staskobzar/goagi/badge)](https://www.codefactor.io/repository/github/staskobzar/goagi)
@@ -10,83 +9,61 @@
 
 
 
+>TODO: fix docs and examples
 Simple library that helps to build AGI sctipts or FastAGI servers with Go.
 ```go
 import "github.com/staskobzar/goagi"
 ```
 
 ## Usage FastAGI
-
-```go
-var (
-	// EInvalResp error returns when AGI response does not match pattern
-	EInvalResp = errorNew("Invalid AGI response")
-	// EHangUp error when HANGUP signal received
-	EHangUp = errorNew("HANGUP")
-)
-```
-
 ```go
 var (
 	// error returned when AGI environment header is not valid
-	EInvalEnv = errorNew("Invalid AGI env variable")
+  ErrAGI = newError("AGI session")
 )
 ```
 
-#### func  NewFastAGI
+#### func New
 
 ```go
-func NewFastAGI(ln net.Listener) (<-chan *FastAGI, <-chan error)
+func New(r Reader, w Writer, dbg Debugger) (*AGI, error) {
 ```
-NewFastAGI starts listening and serve AGI network calls.
-
-Usage example:
-
+New creates and returns AGI object.
+Can be used to create agi and fastagi sessions.
+Example for agi:
 ```go
+	import (
+		"github.com/staskobzar/goagi"
+		"os"
+	)
 
-    	import (
-        	"github.com/staskobzar/goagi"
-    		"time"
-        	"log"
-        )
-
-    	func main() {
-    		serve := func (fagi *goagi.FastAGI) {
-    			agi := fagi.AGI()
-    			agi.Verbose("New FastAGI session")
-    			agi.Answer()
-    			if clid, err := agi.GetVariable("CALLERID"); err == nil {
-    				log.Printf("CallerID %s\n", clid)
-    				ag.Varbose("Call from " + clid)
-    			}
-					fagi.Close()
-    		}
-    		// listen, serve and reconnect on fail
-    		for {
-    			ln, err := net.Listen("tcp", "127.0.0.1:4573")
-    			if err != nil {
-    				log.Println("Connection error. Re-try in 3 sec.")
-    				<-time.After(time.Second * 3)
-    				continue
-    			}
-    			chFagi, chErr := goagi.NewFastAGI(ln)
-
-    		Loop:
-    			for {
-    				select {
-    				case fagi := <-chFagi:
-							go serve(fagi)
-    				case err :=<-chErr:
-    					ln.Close()
-    					log.Println(err)
-    					break Loop
-    				}
-    			}
-    		}
-    	}
-
+	agi, err := goagi.New(os.Stdin, os.Stdout, nil)
+	if err != nil {
+		panic(err)
+	}
+	agi.Verbose("Hello World!")
 ```
 
+Fast agi example:
+```go
+	ln, err := net.Listen("tcp", "127.0.0.1:4573")
+	if err != nil {
+		panic(err)
+	}
+	for {
+		conn, err := ln.Accept()
+		if err != nil {
+			panic(err)
+		}
+		go func(conn net.Conn) {
+			agi, err := goagi.New(conn, conn, nil)
+			if err != nil {
+				panic(err)
+			}
+			agi.Verbose("Hello World!")
+		}(conn)
+	}
+```
 #### type AGI
 
 ```go
@@ -95,55 +72,6 @@ type AGI struct {
 ```
 
 AGI interface structure
-
-#### func  NewAGI
-
-```go
-func NewAGI() (*AGI, error)
-```
-NewAGI creates and returns AGI object. Parses AGI arguments and set ready for
-communication.
-
-Usage example:
-
-```go
-
-    import (
-    	"github.com/staskobzar/goagi"
-    	"log"
-    )
-
-    int main() {
-    	agi, err := goagi.NewAGI()
-    	if err != nil {
-    		log.Fatalln(err)
-    	}
-    	agi.Verbose("New AGI session.")
-    	if err := agi.SetMusic("on", "jazz"); err != nil {
-    		log.Fatalln(err)
-    	}
-
-    	clid, err := agi.GetVariable("CALLERID")
-    	if err != nil {
-    		log.Fatalln(err)
-    	}
-    	agi.Verbose("Call from " + clid)
-    	if err := agi.SetMusic("off"); err != nil {
-    		log.Fatalln(err)
-    	}
-    }
-
-```
-
-#### func (*AGI) Answer
-
-```go
-func (agi *AGI) Answer() (bool, error)
-```
-Answer executes AGI command "ANSWER" Answers channel if not already in answer
-state.
-
-#### func (*AGI) AsyncAGIBreak
 
 ```go
 func (agi *AGI) AsyncAGIBreak() (bool, error)
