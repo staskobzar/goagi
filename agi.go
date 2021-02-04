@@ -2,149 +2,275 @@ package goagi
 
 import (
 	"bufio"
-	"net"
-	"os"
+	"strings"
+	"time"
 )
 
+// ErrAGI goagi error
+var ErrAGI = newError("AGI session")
+
+const rwDefaultTimeout = time.Second * 1
+
+// Reader interface for AGI object. Can be net.Conn, os.File or crafted
+type Reader interface {
+	Read(b []byte) (int, error)
+	SetReadDeadline(t time.Time) error
+}
+
+// Writer interface for AGI object. Can be net.Conn, os.File or crafted
+type Writer interface {
+	SetWriteDeadline(t time.Time) error
+	Write(b []byte) (int, error)
+}
+
 /*
-NewAGI creates and returns AGI object.
-Parses AGI arguments and set ready for communication.
-
+Debugger for AGI instance. Any interface that provides Printf method.
 Usage example:
+```go
+	dbg := logger.New(os.Stdout, "myagi:", log.Lmicroseconds)
+	r, w := net.Pipe()
+	agi, err := goagi.New(r, w, dbg)
+```
+It should be used only for debugging as it give lots of output.
+*/
+type Debugger interface {
+	Printf(format string, v ...interface{})
+}
 
+// AGI object
+type AGI struct {
+	env      map[string]string
+	arg      []string
+	reader   Reader
+	writer   Writer
+	isHUP    bool
+	debugger Debugger
+	rwtout   time.Duration
+}
+
+const (
+	codeUnknown int = 0
+	codeEarly       = 100
+	codeSucc        = 200
+	codeE503        = 503
+	codeE510        = 510
+	codeE511        = 511
+	codeE520        = 520
+)
+
+var codeMap = map[string]int{
+	"100 ": codeEarly,
+	"200 ": codeSucc,
+	"503 ": codeE503,
+	"510 ": codeE510,
+	"511 ": codeE511,
+	"520 ": codeE520,
+}
+
+/*
+New creates and returns AGI object.
+Can be used to create agi and fastagi sessions.
+Example for agi:
 ```go
 	import (
 		"github.com/staskobzar/goagi"
-		"log"
+		"os"
 	)
 
-	int main() {
-		agi, err := goagi.NewAGI()
-		if err != nil {
-			log.Fatalln(err)
-		}
-		agi.Verbose("New AGI session.")
-		if err := agi.SetMusic("on", "jazz"); err != nil {
-			log.Fatalln(err)
-		}
-
-		clid, err := agi.GetVariable("CALLERID")
-		if err != nil {
-			log.Fatalln(err)
-		}
-		agi.Verbose("Call from " + clid)
-		if err := agi.SetMusic("off"); err != nil {
-			log.Fatalln(err)
-		}
+	agi, err := goagi.New(os.Stdin, os.Stdout, nil)
+	if err != nil {
+		panic(err)
 	}
+	agi.Verbose("Hello World!")
 ```
 
-*/
-func NewAGI() (*AGI, error) {
-	in := bufio.NewWriter(os.Stdout)
-	out := bufio.NewReader(os.Stdin)
-
-	agi, err := newInterface(bufio.NewReadWriter(out, in))
+Fast agi example:
+```go
+	ln, err := net.Listen("tcp", "127.0.0.1:4573")
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
+	for {
+		conn, err := ln.Accept()
+		if err != nil {
+			panic(err)
+		}
+		go func(conn net.Conn) {
+			agi, err := goagi.New(conn, conn, nil)
+			if err != nil {
+				panic(err)
+			}
+			agi.Verbose("Hello World!")
+		}(conn)
+	}
+```
+*/
+func New(r Reader, w Writer, dbg Debugger) (*AGI, error) {
+	agi := &AGI{
+		reader:   r,
+		writer:   w,
+		debugger: dbg,
+		rwtout:   rwDefaultTimeout,
+	}
+	agi.dbg("[>] New AGI")
+	sessData, err := agi.sessionInit()
+	if err != nil {
+		return nil, ErrAGI.Msg("Failed to read setup: %s", err)
+	}
+	agi.sessionSetup(sessData)
 	return agi, nil
 }
 
-// FastAGI defines sturcture of fast AGI server
-type FastAGI struct {
-	agi  *AGI
-	conn net.Conn
-}
-
-// Conn returns AGI instance on every Asterisk connection
-func (fagi *FastAGI) AGI() *AGI {
-	return fagi.agi
-}
-
-// Close terminates Fast AGI
-func (fagi *FastAGI) Close() error {
-	return fagi.conn.Close()
-}
-
-// RemoteAddr returns remote connected client host and port as string
-func (fagi *FastAGI) RemoteAddr() string {
-	return fagi.conn.RemoteAddr().String()
-}
-
-/*
-NewFastAGI starts listening and serve AGI network calls.
-
-Usage example:
-
-```go
-	import (
-    	"github.com/staskobzar/goagi"
-		"time"
-    	"log"
-    )
-
-	func main() {
-		serve := func (fagi *goagi.FastAGI) {
-			agi := fagi.AGI()
-			agi.Verbose("New FastAGI session")
-			agi.Answer()
-			if clid, err := agi.GetVariable("CALLERID"); err == nil {
-				log.Printf("CallerID %s\n", clid)
-				ag.Varbose("Call from " + clid)
-			}
-			fagi.Close()
-		}
-		// listen, serve and reconnect on fail
-		for {
-			ln, err := net.Listen("tcp", "127.0.0.1:4573")
-			if err != nil {
-				log.Println("Connection error. Re-try in 3 sec.")
-				<-time.After(time.Second * 3)
-				continue
-			}
-			chFagi, chErr := goagi.NewFastAGI(ln)
-
-		Loop:
-			for {
-				select {
-				case fagi := <-chFagi:
-					go serve(fagi)
-				case err :=<-chErr:
-					ln.Close()
-					log.Println(err)
-					break Loop
-				}
-			}
-		}
+// Env returns AGI environment variable by key
+func (agi *AGI) Env(key string) string {
+	agi.dbg("[>] Env for %q", key)
+	val, ok := agi.env[key]
+	if ok {
+		return val
 	}
-```
-*/
-func NewFastAGI(ln net.Listener) (<-chan *FastAGI, <-chan error) {
-	chFagi := make(chan *FastAGI)
-	chErr := make(chan error)
+	return ""
+}
 
-	go func(chFagi chan *FastAGI, chErr chan error) {
-		defer close(chFagi)
-		defer close(chErr)
-		for {
-			conn, err := ln.Accept()
-			if err != nil {
-				chErr <- err
+// EnvArgs returns list of environment arguments
+func (agi *AGI) EnvArgs() []string {
+	agi.dbg("[>] EnvArgs")
+	return agi.arg
+}
+
+func (agi *AGI) sessionInit() ([]string, error) {
+	agi.dbg("[>] sessionInit")
+	buf := bufio.NewReader(agi.reader)
+	data := make([]string, 0)
+
+	for {
+		tout := time.Now().Add(agi.rwtout)
+		if err := agi.reader.SetReadDeadline(tout); err != nil {
+			return nil, err
+		}
+		line, err := buf.ReadString('\n')
+		if err != nil {
+			return nil, err
+		}
+		if line == "\n" {
+			break
+		}
+		agi.dbg(" [v] read line: %q", line)
+		data = append(data, line[:len(line)-1])
+	}
+	return data, nil
+}
+
+func (agi *AGI) dbg(pattern string, vargs ...interface{}) {
+	if agi.debugger != nil {
+		pattern += "\n"
+		agi.debugger.Printf(pattern, vargs...)
+	}
+}
+
+// low level response from device and response as string, matched response
+// code, true if channel reported as hangup and error.
+// if timeout > 0 then will read with timeout
+func (agi *AGI) read(timeout time.Duration) (resp string, code int, err error) {
+	agi.dbg("[>] readResponse")
+	buf := bufio.NewReader(agi.reader)
+	var builder strings.Builder
+	moreInputExpected := false
+
+	for {
+		if timeout > 0 {
+			tout := time.Now().Add(timeout)
+			if fail := agi.reader.SetReadDeadline(tout); fail != nil {
+				err = fail
 				return
 			}
-
-			in := bufio.NewWriter(conn)
-			out := bufio.NewReader(conn)
-			agi, err := newInterface(bufio.NewReadWriter(out, in))
-			if err != nil {
-				// invalid input data. skip
-				conn.Close()
-				continue
-			}
-			fagi := &FastAGI{agi: agi, conn: conn}
-			chFagi <- fagi
 		}
-	}(chFagi, chErr)
-	return chFagi, chErr
+
+		line, fail := buf.ReadString('\n')
+		if fail != nil {
+			err = fail
+			return
+		}
+
+		agi.dbg(" [v] got line: %q", line)
+
+		builder.WriteString(line)
+		resp = builder.String()
+		if codeMatch, ok := matchCode(line); ok {
+			code = codeMatch
+			return
+		}
+
+		if matchPrefix(line, "520-") {
+			moreInputExpected = true
+		}
+
+		if matchPrefix(line, "HANGUP") {
+			agi.isHUP = true
+			builder.Reset()
+			continue
+		}
+
+		if !moreInputExpected {
+			err = ErrAGI.Msg("Invalid input while reading response: %q", resp)
+			return
+		}
+	}
+}
+
+func matchPrefix(line, pattern string) bool {
+	if len(line) < len(pattern) {
+		return false
+	}
+	return line[:len(pattern)] == pattern
+}
+
+func matchCode(data string) (int, bool) {
+	if len(data) < 4 {
+		return 0, false
+	}
+	if codeMatch, ok := codeMap[data[:4]]; ok {
+		return codeMatch, true
+	}
+	return 0, false
+}
+
+func (agi *AGI) write(command []byte) error {
+	agi.dbg("[>] readResponse")
+	if agi.rwtout > 0 {
+		tout := time.Now().Add(agi.rwtout)
+		agi.dbg(" [v] set write timeout: %dns", tout)
+
+		if err := agi.writer.SetWriteDeadline(tout); err != nil {
+			return err
+		}
+	}
+
+	agi.dbg(" [v] write command: %q\n", string(command))
+
+	_, err := agi.writer.Write(command)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// write command, read and parse response
+func (agi *AGI) execute(cmd string, timeout bool) (Response, error) {
+	agi.dbg("[>] execute cmd: %q", cmd)
+	if err := agi.write([]byte(cmd)); err != nil {
+		return nil, err
+	}
+
+	var tout time.Duration
+	if timeout {
+		tout = agi.rwtout
+	}
+	agi.dbg(" [v] read timeout=%d", tout)
+
+	resp, code, err := agi.read(tout)
+	if err != nil {
+		return nil, err
+	}
+
+	return agi.parseResponse(resp, code)
 }
