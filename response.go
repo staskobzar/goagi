@@ -5,14 +5,24 @@ import (
 	"strings"
 )
 
+// Response interface that all commands return.
+// Helps to access different parts of AGI response
 type Response interface {
+	// Code of response: 200, 510 etc
 	Code() int
+	// RawResponse return full text of AGI response
 	RawResponse() string
+	// Result returns value of result= field
 	Result() int
+	// Value returns value field: (timeout)
 	Value() string
+	// Data return text for error responses and dtmf values for command like GetData
 	Data() string
+	// EndPos returns value for endpos= field
 	EndPos() int64
+	// Digit return digit from digit= field
 	Digit() string
+	// SResults return value for results= field
 	SResults() int
 }
 

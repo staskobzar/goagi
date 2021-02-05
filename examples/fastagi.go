@@ -9,7 +9,7 @@ import (
 	"github.com/staskobzar/goagi"
 )
 
-func Serve(conn net.Conn) {
+func serve(conn net.Conn) {
 	defer conn.Close()
 
 	dbg := log.New(os.Stdout, "fastagi example: ", log.Lmicroseconds)
@@ -59,6 +59,6 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		go Serve(conn)
+		go serve(conn)
 	}
 }
