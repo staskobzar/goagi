@@ -231,12 +231,13 @@ func (agi *AGI) write(command []byte) error {
 		}
 	}
 
-	agi.dbg(" [v] write command: %q\n", string(command))
+	agi.dbg(" [v] writing command: %q", string(command))
 
 	_, err := agi.writer.Write(command)
 	if err != nil {
 		return err
 	}
+	agi.dbg(" [v] write successfully done")
 	return nil
 }
 
