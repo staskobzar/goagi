@@ -18,16 +18,8 @@ type Writer interface {
 	Write(b []byte) (int, error)
 }
 
-/*
-Debugger for AGI instance. Any interface that provides Printf method.
-Usage example:
-```go
-	dbg := logger.New(os.Stdout, "myagi:", log.Lmicroseconds)
-	r, w := net.Pipe()
-	agi, err := goagi.New(r, w, dbg)
-```
-It should be used only for debugging as it give lots of output.
-*/
+// Debugger for AGI instance. Any interface that provides Printf method.
+// It should be used only for debugging as it give lots of output.
 type Debugger interface {
 	Printf(format string, v ...interface{})
 }
@@ -64,40 +56,15 @@ var codeMap = map[string]int{
 /*
 New creates and returns AGI object.
 Can be used to create agi and fastagi sessions.
-Example for agi:
-```go
-	import (
-		"github.com/staskobzar/goagi"
-		"os"
-	)
 
-	agi, err := goagi.New(os.Stdin, os.Stdout, nil)
-	if err != nil {
-		panic(err)
-	}
-	agi.Verbose("Hello World!")
-```
+Parameters:
 
-Fast agi example:
-```go
-	ln, err := net.Listen("tcp", "127.0.0.1:4573")
-	if err != nil {
-		panic(err)
-	}
-	for {
-		conn, err := ln.Accept()
-		if err != nil {
-			panic(err)
-		}
-		go func(conn net.Conn) {
-			agi, err := goagi.New(conn, conn, nil)
-			if err != nil {
-				panic(err)
-			}
-			agi.Verbose("Hello World!")
-		}(conn)
-	}
-```
+- Reader that implements Read method
+
+- Writer that implements Write method
+
+- Debugger that allows to deep library debugging. Nil for production.
+
 */
 func New(r Reader, w Writer, dbg Debugger) (*AGI, error) {
 	agi := &AGI{

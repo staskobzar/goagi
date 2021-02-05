@@ -16,7 +16,7 @@ type Response interface {
 	Result() int
 	// Value returns value field: (timeout)
 	Value() string
-	// Data return text for error responses and dtmf values for command like GetData
+	// Data returns text for error responses and dtmf values for command like GetData
 	Data() string
 	// EndPos returns value for endpos= field
 	EndPos() int64

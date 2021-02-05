@@ -23,35 +23,47 @@ func (agi *AGI) AsyncAGIBreak() (Response, error) {
 	return agi.execute("ASYNCAGI BREAK\n")
 }
 
-// ChannelStatus returns status of the connected channel.
-//
-// If no channel name is given (empty line) then returns the status of the current channel.
-//
-//Return values:
-//	0 - Channel is down and available.
-//	1 - Channel is down, but reserved.
-//	2 - Channel is off hook.
-//	3 - Digits (or equivalent) have been dialed.
-//	4 - Line is ringing.
-//	5 - Remote end is ringing.
-//	6 - Line is up.
-//	7 - Line is busy.
+/*
+ChannelStatus returns status of the connected channel.
+
+If no channel name is given (empty line) then returns the status of the current channel.
+
+Return values:
+
+0 - Channel is down and available.
+
+1 - Channel is down, but reserved.
+
+2 - Channel is off hook.
+
+3 - Digits (or equivalent) have been dialed.
+
+4 - Line is ringing.
+
+5 - Remote end is ringing.
+
+6 - Line is up.
+
+7 - Line is busy.
+*/
 func (agi *AGI) ChannelStatus(channel string) (Response, error) {
 	cmd := fmt.Sprintf("CHANNEL STATUS %s\n", channel)
 	return agi.execute(cmd)
 }
 
-// ControlStreamFile sends audio file on channel and allows the listener
-// to control the stream.
-//	Send the given file, allowing playback to be controlled by the given digits, if any.
-// Use double quotes for the digits if you wish none to be permitted. If offsetms
-// is provided then the audio will seek to offsetms before play starts.
-//	Example:
-//	agi.ControlStreamFile("prompt_en", "19", "3000", "#", "0", "#", "1600")
-//	agi.ControlStreamFile("prompt_en", "")
-//	agi.ControlStreamFile("prompt_en", "19", "", "", "", "#", "1600")
-//CONTROL STREAM FILE FILENAME ESCAPE_DIGITS
-//SKIPMS FFCHAR REWCHR PAUSECHR OFFSETMS
+/*
+ControlStreamFile sends audio file on channel and allows the listener to control the stream.
+Send the given file, allowing playback to be controlled by the given digits, if any.
+Use double quotes for the digits if you wish none to be permitted. If offsetms
+is provided then the audio will seek to offsetms before play starts.
+
+Example:
+
+	agi.ControlStreamFile("prompt_en", "19", "3000", "#", "0", "#", "1600")
+	agi.ControlStreamFile("prompt_en", "")
+	agi.ControlStreamFile("prompt_en", "19", "", "", "", "#", "1600")
+
+*/
 func (agi *AGI) ControlStreamFile(filename, digits string, args ...string) (Response, error) {
 	cmd := fmt.Sprintf("CONTROL STREAM FILE %s %q", filename, digits)
 
@@ -101,15 +113,19 @@ func (agi *AGI) Exec(app, opts string) (Response, error) {
 	return agi.execute(cmd)
 }
 
-// GetData Stream the given file, and receive DTMF data.
-// Note: when timeout is 0 then Asterisk will use 6 secods.
-// Note: Asterisk has strange way to handle get data response.
-// Contrary to other responses, where result has numeric value,
-// here asterisk puts DTMF to sent by user to result and this value
-// may contain "#" and "*".
-// To get DTMF sent by user use Response.Data()
-// Response.Value() will contain "timeout" if user has not terminated
-// input with "#"
+/*
+GetData Stream the given file, and receive DTMF data.
+Note: when timeout is 0 then Asterisk will use 6 secods.
+Note: Asterisk has strange way to handle get data response.
+Contrary to other responses, where result has numeric value,
+here asterisk puts DTMF to sent by user to result and this value
+may contain "#" and "*".
+
+To get DTMF sent by user use Response.Data()
+
+Response.Value() will contain "timeout" if user has not terminated
+input with "#"
+*/
 func (agi *AGI) GetData(file string, timeout, maxdigit int) (Response, error) {
 	cmd := fmt.Sprintf("GET DATA %s %d %d\n", file, timeout, maxdigit)
 	resp, err := agi.execute(cmd)
@@ -152,8 +168,7 @@ func (agi *AGI) GetVariable(name string) (Response, error) {
 	return agi.execute(cmd)
 }
 
-// Hangup a channel.
-//	Hangs up the specified channel. If no channel name is given, hangs up the current channel
+// Hangs up the specified channel. If no channel name is given, hangs up the current channel
 func (agi *AGI) Hangup(channel ...string) (Response, error) {
 	cmd := "HANGUP"
 
@@ -165,34 +180,48 @@ func (agi *AGI) Hangup(channel ...string) (Response, error) {
 	return agi.execute(cmd)
 }
 
-// ReceiveChar Receives one character from channels supporting it.
-//	Most channels do not support the reception of text. Returns the decimal value of
-// the character if one is received, or 0 if the channel does not support text reception.
-//	timeout - The maximum time to wait for input in milliseconds, or 0 for infinite.
-// Returns result -1 on error or char byte
+/*
+ReceiveChar Receives one character from channels supporting it.
+Most channels do not support the reception of text. Returns the decimal value of
+the character if one is received, or 0 if the channel does not support text reception.
+
+timeout - The maximum time to wait for input in milliseconds, or 0 for infinite.
+
+Returns result -1 on error or char byte
+*/
 func (agi *AGI) ReceiveChar(timeout int) (Response, error) {
 	cmd := fmt.Sprintf("RECEIVE CHAR %d\n", timeout)
 	return agi.execute(cmd)
 }
 
-// ReceiveText Receives text from channels supporting it.
-//	timeout - The timeout to be the maximum time to wait for input in milliseconds, or 0 for infinite.
+/*
+ReceiveText Receives text from channels supporting it.
+
+timeout - The timeout to be the maximum time to wait for input in milliseconds, or 0 for infinite.
+*/
 func (agi *AGI) ReceiveText(timeout int) (Response, error) {
 	cmd := fmt.Sprintf("RECEIVE TEXT %d\n", timeout)
 	return agi.execute(cmd)
 }
 
-// RecordFile Record to a file until a given dtmf digit in the sequence is received.
-// The format will specify what kind of file will be recorded. The timeout is the
-// maximum record time in milliseconds, or -1 for no timeout.
-//	offset samples is optional, and, if provided, will seek to the offset without
-// exceeding the end of the file.
-//	beep causes Asterisk to play a beep to the channel that is about to be recorded.
-//	silence is the number of seconds of silence allowed before the function returns
-// despite the lack of dtmf digits or reaching timeout.
-//	silence is the number of seconds of silence that are permitted before the
-// recording is terminated, regardless of the escape_digits or timeout arguments
-// If interupted by DTMF, digits will be available in Response.Data()
+/*
+RecordFile Record to a file until a given dtmf digit in the sequence is received.
+The format will specify what kind of file will be recorded. The timeout is the
+maximum record time in milliseconds, or -1 for no timeout.
+
+offset samples is optional, and, if provided, will seek to the offset without
+exceeding the end of the file.
+
+beep causes Asterisk to play a beep to the channel that is about to be recorded.
+
+silence is the number of seconds of silence allowed before the function returns
+despite the lack of dtmf digits or reaching timeout.
+
+silence is the number of seconds of silence that are permitted before the
+recording is terminated, regardless of the escape_digits or timeout arguments
+
+If interupted by DTMF, digits will be available in Response.Data()
+*/
 func (agi *AGI) RecordFile(file, format, escDigits string,
 	timeout, offset int, beep bool, silence int) (Response, error) {
 
@@ -349,7 +378,7 @@ func (agi *AGI) StreamFile(file, escDigits string, offset int) (Response, error)
 }
 
 // TDDMode Enable/Disable TDD transmission/reception on a channel.
-//	Modes: on, off, mate, tdd
+// Modes: on, off, mate, tdd
 func (agi *AGI) TDDMode(mode string) (Response, error) {
 	cmd := "TDD MODE"
 	switch mode {
@@ -375,9 +404,12 @@ func (agi *AGI) Verbose(msg string, level ...int) (Response, error) {
 	return agi.execute(cmd)
 }
 
-// WaitForDigit Waits up to timeout *milliseconds* for channel to receive a DTMF digit.
-// Use -1 for the timeout value if you desire the call to block indefinitely.
-//	Return digit pressed as string or error
+/*
+WaitForDigit Waits up to timeout *milliseconds* for channel to receive a DTMF digit.
+Use -1 for the timeout value if you desire the call to block indefinitely.
+
+Return digit pressed as string or error
+*/
 func (agi *AGI) WaitForDigit(timeout int) (Response, error) {
 	cmd := fmt.Sprintf("WAIT FOR DIGIT %d\n", timeout)
 	return agi.execute(cmd)

@@ -18,6 +18,9 @@ bench:
 readme:
 	mdr README.md
 
+docmd:
+	@gomarkdoc . > docs/api.md
+
 clean:
 	rm -f coverage.out
 	go clean

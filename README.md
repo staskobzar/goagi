@@ -9,28 +9,31 @@
 
 
 
->TODO: fix docs and examples
 Simple library that helps to build AGI sctipts or FastAGI servers with Go.
 ```go
 import "github.com/staskobzar/goagi"
 ```
 
+API documentation [link is here](docs/api.md).
+
 ## Usage FastAGI
-```go
-var (
-	// error returned when AGI environment header is not valid
-  ErrAGI = newError("AGI session")
-)
-```
 
-#### func New
+AGI object is created with ```New``` [method](docs/api.md#func-new) with three arguments:
+- Reader [interface](docs/api.md#type-reader)
+- Writer [interface](docs/api.md#type-response)
+- Debuger [interface](docs/api.md#type-debugger)
 
-```go
-func New(r Reader, w Writer, dbg Debugger) (*AGI, error) {
-```
-New creates and returns AGI object.
-Can be used to create agi and fastagi sessions.
-Example for agi:
+Debugger interface is required only for debugging and usually ```nil```. See below for more details.
+
+Reader and Writer are interfaces are any objects that implement ```Read```/```Write``` methods
+and can be ```net.Conn```, ```tls.Conn```, ```os.Stdin```, ```os.Stdout``` or any other,
+for example from packages ```strings```, ```bufio```, ```bytes```.
+
+```New``` method will read AGI session setup environment variables and provides interface
+to AGI commands. AGI environment variables and arguments can be accessed with 
+methods [```Env```](docs/api.md#func-agi-env) and [```EnvArgs```](docs/api.md#func-agi-envargs).
+
+### Usage example for AGI:
 ```go
 	import (
 		"github.com/staskobzar/goagi"
@@ -44,7 +47,7 @@ Example for agi:
 	agi.Verbose("Hello World!")
 ```
 
-Fast agi example:
+### Fast AGI example:
 ```go
 	ln, err := net.Listen("tcp", "127.0.0.1:4573")
 	if err != nil {
@@ -64,411 +67,43 @@ Fast agi example:
 		}(conn)
 	}
 ```
-#### type AGI
+
+See working examples in [examples/] folder.
+
+Index of methods that implements AGI commands [see here.](docs/api.md)
+
+## Commands Response interface
+
+Every AGI command method return interface [```Response```](docs/api.md#type-response).
+This is interface that provides access to AGI response values.
+Success response example:
+```
+200 result=1 (speech) endpos=9834523 results=5
+```
+Fail response example:
+```
+511 Command Not Permitted on a dead channel or intercept routine
+```
+There are success  and error responses. 
+Response interface implements following methods:
+
+* ```Code() int```: response code: 200, 510 etc.
+* ```RawResponse() string```: returns full text of AGI response.
+* ```Result() int```: returns value of result= field.
+* ```Value() string```: returns response value field that comes in parentheses. For exmpale "(timeout)" in response "200 result=1 (timeout)".
+* ```Data() string```: returns text for error responses and dtmf values for command like GetData.
+* ```EndPos() int64```: returns value for endpos= field.
+* ```Digit() string```: return digit from digit= field.
+* ```SResults() int```: return value for results= field.
+
+## Debugger
+
+Interface that provides debugging capabilities with configurable output.
+
+Example of usage:
 
 ```go
-type AGI struct {
-}
+	dbg := logger.New(os.Stdout, "myagi:", log.Lmicroseconds)
+	r, w := net.Pipe()
+	agi, err := goagi.New(r, w, dbg)
 ```
-
-AGI interface structure
-
-```go
-func (agi *AGI) AsyncAGIBreak() (bool, error)
-```
-AsyncAGIBreak Interrupts Async AGI
-
-    Interrupts expected flow of Async AGI commands and returns control
-
-to previous source (typically, the PBX dialplan).
-
-#### func (*AGI) ChannelStatus
-
-```go
-func (agi *AGI) ChannelStatus(channel string) (int, error)
-```
-ChannelStatus returns status of the connected channel.
-
-If no channel name is given (empty line) then returns the status of the current
-channel.
-
-Return values:
-
-    0 - Channel is down and available.
-    1 - Channel is down, but reserved.
-    2 - Channel is off hook.
-    3 - Digits (or equivalent) have been dialed.
-    4 - Line is ringing.
-    5 - Remote end is ringing.
-    6 - Line is up.
-    7 - Line is busy.
-
-#### func (*AGI) Command
-
-```go
-func (agi *AGI) Command(cmd string) (code int, result int, respStr string, err error)
-```
-Command sends command as string to the AGI and returns response valus with text
-response
-
-#### func (*AGI) ControlStreamFile
-
-```go
-func (agi *AGI) ControlStreamFile(filename, digits string, args ...interface{}) (int32, error)
-```
-ControlStreamFile sends audio file on channel and allows the listener to control
-the stream.
-
-    Send the given file, allowing playback to be controlled by the given digits, if any.
-
-Use double quotes for the digits if you wish none to be permitted. If offsetms
-is provided then the audio will seek to offsetms before play starts.
-
-    Returns 0 if playback completes without a digit being pressed, or the ASCII numerical
-
-value of the digit if one was pressed, or -1 on error or if the channel was
-disconnected.
-
-    Returns the position where playback was terminated as endpos.
-    Example:
-    agi.ControlStreamFile("prompt_en", "19", "3000", "#", "0", "#", "1600")
-    agi.ControlStreamFile("prompt_en", "")
-    agi.ControlStreamFile("prompt_en", "19", "", "", "", "#", "1600")
-
-#### func (*AGI) DatabaseDel
-
-```go
-func (agi *AGI) DatabaseDel(family, key string) (bool, error)
-```
-DatabaseDel deletes an entry in the Asterisk database for a given family and
-key.
-
-    Returns status and error if fails.
-
-#### func (*AGI) DatabaseDelTree
-
-```go
-func (agi *AGI) DatabaseDelTree(family, keytree string) (bool, error)
-```
-DatabaseDelTree deletes a family or specific keytree within a family in the
-Asterisk database.
-
-#### func (*AGI) DatabaseGet
-
-```go
-func (agi *AGI) DatabaseGet(family, key string) (string, error)
-```
-DatabaseGet Retrieves an entry in the Asterisk database for a given family and
-key.
-
-    Returns value as string or error if failed or value not set
-
-#### func (*AGI) DatabasePut
-
-```go
-func (agi *AGI) DatabasePut(family, key, val string) (bool, error)
-```
-DatabasePut adds or updates an entry in the Asterisk database for a given
-family, key, and value.
-
-#### func (*AGI) Env
-
-```go
-func (agi *AGI) Env(key string) string
-```
-Env returns AGI environment variable by key
-
-#### func (*AGI) EnvArgs
-
-```go
-func (agi *AGI) EnvArgs() []string
-```
-EnvArgs returns list of environment arguments
-
-#### func (*AGI) Exec
-
-```go
-func (agi *AGI) Exec(app, opts string) (int, error)
-```
-Exec executes application with given options.
-
-#### func (*AGI) GetData
-
-```go
-func (agi *AGI) GetData(file string, args ...interface{}) (digit string, timeout bool, err error)
-```
-GetData Stream the given file, and receive DTMF data.
-
-#### func (*AGI) GetFullVariable
-
-```go
-func (agi *AGI) GetFullVariable(name string, channel ...string) (string, error)
-```
-GetFullVariable evaluates a channel expression
-
-#### func (*AGI) GetOption
-
-```go
-func (agi *AGI) GetOption(filename, digits string, timeout int32) (int, int32, error)
-```
-GetOption Stream file, prompt for DTMF, with timeout.
-
-    Behaves similar to STREAM FILE but used with a timeout option.
-    Returns digit pressed, offset and error
-
-#### func (*AGI) GetVariable
-
-```go
-func (agi *AGI) GetVariable(name string) (string, error)
-```
-GetVariable Gets a channel variable.
-
-#### func (*AGI) Hangup
-
-```go
-func (agi *AGI) Hangup(channel ...string) (bool, error)
-```
-Hangup a channel.
-
-    Hangs up the specified channel. If no channel name is given, hangs up the current channel
-
-#### func (*AGI) Noop
-
-```go
-func (agi *AGI) Noop() error
-```
-Noop Does nothing.
-
-#### func (*AGI) ReceiveChar
-
-```go
-func (agi *AGI) ReceiveChar(timeout int32) (int, error)
-```
-ReceiveChar Receives one character from channels supporting it.
-
-    Most channels do not support the reception of text. Returns the decimal value of
-
-the character if one is received, or 0 if the channel does not support text
-reception.
-
-    timeout - The maximum time to wait for input in milliseconds, or 0 for infinite. Most channels
-    Returns -1 only on error/hangup.
-
-#### func (*AGI) ReceiveText
-
-```go
-func (agi *AGI) ReceiveText(timeout int32) (string, error)
-```
-ReceiveText Receives text from channels supporting it.
-
-    timeout - The timeout to be the maximum time to wait for input in milliseconds, or 0 for infinite.
-
-#### func (*AGI) RecordFile
-
-```go
-func (agi *AGI) RecordFile(file, format, escDigits string,
-	timeout, offset int, beep bool, silence int) error
-```
-RecordFile Record to a file until a given dtmf digit in the sequence is
-received. The format will specify what kind of file will be recorded. The
-timeout is the maximum record time in milliseconds, or -1 for no timeout.
-
-    offset samples is optional, and, if provided, will seek to the offset without
-
-exceeding the end of the file.
-
-    beep causes Asterisk to play a beep to the channel that is about to be recorded.
-    silence is the number of seconds of silence allowed before the function returns
-
-despite the lack of dtmf digits or reaching timeout.
-
-    silence is the number of seconds of silence that are permitted before the
-
-recording is terminated, regardless of the escape_digits or timeout arguments
-
-#### func (*AGI) SayAlpha
-
-```go
-func (agi *AGI) SayAlpha(number, escDigits string) error
-```
-SayAlpha says a given character string, returning early if any of the given DTMF
-digits are received on the channel.
-
-#### func (*AGI) SayDate
-
-```go
-func (agi *AGI) SayDate(date, escDigits string) error
-```
-SayDate say a given date, returning early if any of the given DTMF digits are
-received on the channel
-
-#### func (*AGI) SayDatetime
-
-```go
-func (agi *AGI) SayDatetime(time, escDigits, format, timezone string) error
-```
-SayDatetime say a given time, returning early if any of the given DTMF digits
-are received on the channel
-
-#### func (*AGI) SayDigits
-
-```go
-func (agi *AGI) SayDigits(number, escDigits string) error
-```
-SayDigits say a given digit string, returning early if any of the given DTMF
-digits are received on the channel
-
-#### func (*AGI) SayNumber
-
-```go
-func (agi *AGI) SayNumber(number, escDigits string) error
-```
-SayNumber say a given digit string, returning early if any of the given DTMF
-digits are received on the channel
-
-#### func (*AGI) SayPhonetic
-
-```go
-func (agi *AGI) SayPhonetic(str, escDigits string) error
-```
-SayPhonetic say a given character string with phonetics, returning early if any
-of the given DTMF digits are received on the channel
-
-#### func (*AGI) SayTime
-
-```go
-func (agi *AGI) SayTime(time, escDigits string) error
-```
-SayTime say a given time, returning early if any of the given DTMF digits are
-received on the channel
-
-#### func (*AGI) SendImage
-
-```go
-func (agi *AGI) SendImage(image string) error
-```
-SendImage Sends the given image on a channel. Most channels do not support the
-transmission of images.
-
-#### func (*AGI) SendText
-
-```go
-func (agi *AGI) SendText(text string) error
-```
-SendText Sends the given text on a channel. Most channels do not support the
-transmission of text.
-
-#### func (*AGI) SetAutoHangup
-
-```go
-func (agi *AGI) SetAutoHangup(seconds int) error
-```
-SetAutoHangup Cause the channel to automatically hangup at time seconds in the
-future. Setting to 0 will cause the autohangup feature to be disabled on this
-channel.
-
-#### func (*AGI) SetCallerid
-
-```go
-func (agi *AGI) SetCallerid(clid string) error
-```
-SetCallerid Changes the callerid of the current channel.
-
-#### func (*AGI) SetContext
-
-```go
-func (agi *AGI) SetContext(ctx string) error
-```
-SetContext Sets the context for continuation upon exiting the application.
-
-#### func (*AGI) SetExtension
-
-```go
-func (agi *AGI) SetExtension(ext string) error
-```
-SetExtension Changes the extension for continuation upon exiting the
-application.
-
-#### func (*AGI) SetMusic
-
-```go
-func (agi *AGI) SetMusic(opt string, class ...string) error
-```
-SetMusic Enables/Disables the music on hold generator. If class is not
-specified, then the default music on hold class will be used.
-
-    Parameters: opt is "on" or "off", and music class as string
-
-#### func (*AGI) SetPriority
-
-```go
-func (agi *AGI) SetPriority(priority string) error
-```
-SetPriority Changes the priority for continuation upon exiting the application.
-The priority must be a valid priority or label.
-
-#### func (*AGI) SetVariable
-
-```go
-func (agi *AGI) SetVariable(name, value string) error
-```
-SetVariable Sets a variable to the current channel.
-
-#### func (*AGI) StreamFile
-
-```go
-func (agi *AGI) StreamFile(file, escDigits string, offset int) (int, error)
-```
-StreamFile Send the given file, allowing playback to be interrupted by the given
-digits, if any.
-
-#### func (*AGI) TDDMode
-
-```go
-func (agi *AGI) TDDMode(mode string) error
-```
-TDDMode Enable/Disable TDD transmission/reception on a channel.
-
-    Modes: on, off, mate, tdd
-
-#### func (*AGI) Verbose
-
-```go
-func (agi *AGI) Verbose(msg string, level ...int) error
-```
-Verbose Sends message to the console via verbose message system. level is the
-verbose level (1-4)
-
-#### func (*AGI) WaitForDigit
-
-```go
-func (agi *AGI) WaitForDigit(timeout int) (string, error)
-```
-WaitForDigit Waits up to timeout *milliseconds* for channel to receive a DTMF
-digit. Use -1 for the timeout value if you desire the call to block
-indefinitely.
-
-    Return digit pressed as string or error
-
-#### type FastAGI
-
-```go
-type FastAGI struct {
-}
-```
-
-FastAGI defines sturcture of fast AGI server
-
-#### func (*FastAGI) AGI
-
-```go
-func (fagi *FastAGI) AGI() *AGI
-```
-Conn returns AGI instance on every Asterisk connection
-
-#### func (*FastAGI) Close
-
-```go
-func (fagi *FastAGI) Close()
-```
-Close terminates Fast AGI
