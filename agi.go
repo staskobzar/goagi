@@ -3,13 +3,10 @@ package goagi
 import (
 	"bufio"
 	"strings"
-	"time"
 )
 
 // ErrAGI goagi error
 var ErrAGI = newError("AGI session")
-
-const rwDefaultTimeout = time.Second * 1
 
 // Reader interface for AGI object. Can be net.Conn, os.File or crafted
 type Reader interface {
@@ -18,7 +15,6 @@ type Reader interface {
 
 // Writer interface for AGI object. Can be net.Conn, os.File or crafted
 type Writer interface {
-	SetWriteDeadline(t time.Time) error
 	Write(b []byte) (int, error)
 }
 
@@ -44,7 +40,6 @@ type AGI struct {
 	writer   Writer
 	isHUP    bool
 	debugger Debugger
-	wrtout   time.Duration
 }
 
 const (
@@ -109,7 +104,6 @@ func New(r Reader, w Writer, dbg Debugger) (*AGI, error) {
 		reader:   r,
 		writer:   w,
 		debugger: dbg,
-		wrtout:   rwDefaultTimeout,
 	}
 	agi.dbg("[>] New AGI")
 	sessData, err := agi.sessionInit()
@@ -222,14 +216,6 @@ func matchCode(data string) (int, bool) {
 
 func (agi *AGI) write(command []byte) error {
 	agi.dbg("[>] readResponse")
-	if agi.wrtout > 0 {
-		tout := time.Now().Add(agi.wrtout)
-		agi.dbg(" [v] set write timeout at: %s", tout)
-
-		if err := agi.writer.SetWriteDeadline(tout); err != nil {
-			return err
-		}
-	}
 
 	agi.dbg(" [v] writing command: %q", string(command))
 

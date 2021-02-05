@@ -12,21 +12,21 @@ func stubReaderWriter(response string) (*bytes.Buffer, *stubReader, *stubWriter)
 	buf := new(bytes.Buffer)
 	response += "\n"
 	reader := &stubReader{strings.NewReader(response)}
-	writer := &stubWriter{buf, 0}
+	writer := &stubWriter{buf}
 
 	return buf, reader, writer
 }
 
 func mockAGI(response string) (*AGI, *bytes.Buffer) {
 	buf, r, w := stubReaderWriter(response)
-	return &AGI{reader: r, writer: w, wrtout: rwDefaultTimeout}, buf
+	return &AGI{reader: r, writer: w}, buf
 }
 
 const respOk = "200 result=1"
 
 func TestCmdCommand(t *testing.T) {
 	buf, r, w := stubReaderWriter(respOk)
-	agi := &AGI{reader: r, writer: w, wrtout: rwDefaultTimeout * 5}
+	agi := &AGI{reader: r, writer: w}
 
 	resp, err := agi.Command("ANSWER")
 	assert.Nil(t, err)

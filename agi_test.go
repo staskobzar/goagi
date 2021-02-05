@@ -9,7 +9,6 @@ import (
 	"os"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -20,12 +19,6 @@ type stubReader struct {
 
 type stubWriter struct {
 	io.Writer
-	tout int64
-}
-
-func (w *stubWriter) SetWriteDeadline(t time.Time) error {
-	w.tout = t.Sub(time.Now()).Milliseconds()
-	return nil
 }
 
 var agiSetupInput = []string{
@@ -61,7 +54,7 @@ func TestNew(t *testing.T) {
 	logBuffer := new(bytes.Buffer)
 	logger := log.New(logBuffer, "agi: ", log.Lmicroseconds)
 	reader := &stubReader{strings.NewReader(input)}
-	writer := &stubWriter{ioutil.Discard, 0}
+	writer := &stubWriter{ioutil.Discard}
 
 	agi, err := New(reader, writer, logger)
 	assert.Nil(t, err)
@@ -236,25 +229,6 @@ func TestWriteNetConn(t *testing.T) {
 	assert.Equal(t, "ANSWER\n", string(buf))
 }
 
-func TestWriteTimeout(t *testing.T) {
-	_, writer := net.Pipe()
-	agi := &AGI{writer: writer, wrtout: time.Millisecond * 100}
-
-	err := agi.write([]byte("NOOP\n"))
-	assert.NotNil(t, err)
-	assert.Contains(t, err.Error(), "timeout")
-}
-
-func TestWriteFailSetTimeout(t *testing.T) {
-	_, writer := net.Pipe()
-	agi := &AGI{writer: writer, wrtout: time.Millisecond * 100}
-
-	writer.Close()
-	err := agi.write([]byte("NOOP\n"))
-	assert.NotNil(t, err)
-	assert.Contains(t, err.Error(), "closed")
-}
-
 func TestWriteFail(t *testing.T) {
 	reader, writer, err := os.Pipe()
 	assert.Nil(t, err)
@@ -268,13 +242,12 @@ func TestWriteFail(t *testing.T) {
 
 func TestExecute(t *testing.T) {
 	buf, reader, writer := stubReaderWriter("200 result=1")
-	agi := &AGI{reader: reader, writer: writer, wrtout: rwDefaultTimeout * 5}
+	agi := &AGI{reader: reader, writer: writer}
 	resp, err := agi.execute("NOOP\n")
 	assert.Nil(t, err)
 	assert.Equal(t, "NOOP\n", buf.String())
 	assert.Equal(t, 200, resp.Code())
 	assert.Equal(t, 1, resp.Result())
-	assert.True(t, writer.tout > 4000)
 
 	resp, err = agi.execute("HANGUP\n")
 	assert.NotNil(t, err)
