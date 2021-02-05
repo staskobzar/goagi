@@ -260,7 +260,3 @@ func TestExecute(t *testing.T) {
 	assert.NotNil(t, err)
 	assert.Contains(t, err.Error(), "closed")
 }
-
-func TestAGI(t *testing.T) {
-	// TODO QA tests
-}

@@ -168,7 +168,7 @@ func (agi *AGI) GetVariable(name string) (Response, error) {
 	return agi.execute(cmd)
 }
 
-// Hangs up the specified channel. If no channel name is given, hangs up the current channel
+// Hangup hangs up the specified channel. If no channel name is given, hangs up the current channel
 func (agi *AGI) Hangup(channel ...string) (Response, error) {
 	cmd := "HANGUP"
 
