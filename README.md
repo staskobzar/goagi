@@ -32,6 +32,8 @@ for example from packages ```strings```, ```bufio```, ```bytes```.
 ```New``` method will read AGI session setup environment variables and provides interface
 to AGI commands. AGI environment variables and arguments can be accessed with 
 methods [```Env```](docs/api.md#func-agi-env) and [```EnvArgs```](docs/api.md#func-agi-envargs).
+If AGI channel receives HANGUP message, the session will be marked as hungup. Hangup status
+can be checked by method [```IsHungup```](docs/api.md#func-agi-ishungup).
 
 ### Usage example for AGI:
 ```go

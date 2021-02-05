@@ -28,6 +28,7 @@ import "github.com/staskobzar/goagi"
   - [func (agi *AGI) GetOption(filename, digits string, timeout int32) (Response, error)](<#func-agi-getoption>)
   - [func (agi *AGI) GetVariable(name string) (Response, error)](<#func-agi-getvariable>)
   - [func (agi *AGI) Hangup(channel ...string) (Response, error)](<#func-agi-hangup>)
+  - [func (agi *AGI) IsHungup() bool](<#func-agi-ishungup>)
   - [func (agi *AGI) ReceiveChar(timeout int) (Response, error)](<#func-agi-receivechar>)
   - [func (agi *AGI) ReceiveText(timeout int) (Response, error)](<#func-agi-receivetext>)
   - [func (agi *AGI) RecordFile(file, format, escDigits string,
@@ -261,7 +262,15 @@ GetVariable Gets a channel variable\.
 func (agi *AGI) Hangup(channel ...string) (Response, error)
 ```
 
-Hangs up the specified channel\. If no channel name is given\, hangs up the current channel
+Hangup hangs up the specified channel\. If no channel name is given\, hangs up the current channel
+
+### func \(\*AGI\) [IsHungup](<https://github.com/staskobzar/goagi/blob/master/agi.go#L101>)
+
+```go
+func (agi *AGI) IsHungup() bool
+```
+
+IsHungup returns true if AGI channel recieved HANGUP signal
 
 ### func \(\*AGI\) [ReceiveChar](<https://github.com/staskobzar/goagi/blob/master/command.go#L192>)
 
