@@ -146,7 +146,7 @@ func TestReadResponseWithHangup(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, "200 result=1\n", res)
 	assert.Equal(t, codeSucc, code)
-	assert.True(t, agi.isHUP)
+	assert.True(t, agi.IsHungup())
 }
 
 func TestReadResponseLongError520(t *testing.T) {
@@ -164,7 +164,7 @@ func TestReadResponseLongError520(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, input[7:], res)
 	assert.Equal(t, codeE520, code)
-	assert.True(t, agi.isHUP)
+	assert.True(t, agi.IsHungup())
 }
 
 func TestReadResponseGarbage(t *testing.T) {

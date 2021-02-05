@@ -97,6 +97,11 @@ func (agi *AGI) EnvArgs() []string {
 	return agi.arg
 }
 
+// IsHungup returns true if AGI channel recieved HANGUP signal
+func (agi *AGI) IsHungup() bool {
+	return agi.isHUP
+}
+
 func (agi *AGI) sessionInit() ([]string, error) {
 	agi.dbg("[>] sessionInit")
 	buf := bufio.NewReader(agi.reader)
