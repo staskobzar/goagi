@@ -1,6 +1,6 @@
 # goagi: Golang library to build agi/fastagi applications
 
-[![Build Status](https://travis-ci.org/staskobzar/goagi.svg?branch=master)](https://travis-ci.org/staskobzar/goagi)
+[![Build Status](https://github.com/staskobzar/goagi/actions/workflows/ci.yml/badge.svg)](https://github.com/staskobzar/goagi/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/staskobzar/goagi/branch/master/graph/badge.svg)](https://codecov.io/gh/staskobzar/goagi)
 [![CodeFactor](https://www.codefactor.io/repository/github/staskobzar/goagi/badge)](https://www.codefactor.io/repository/github/staskobzar/goagi)
 [![Scrutinizer Code Quality](https://scrutinizer-ci.com/g/staskobzar/goagi/badges/quality-score.png?b=master)](https://scrutinizer-ci.com/g/staskobzar/goagi/?branch=master)

@@ -9,6 +9,10 @@ cov:
 	@go test -coverprofile=coverage.out
 	@go tool cover -html=coverage.out
 
+codecov:
+	go test -race -coverprofile=coverage.txt -covermode=atomic
+	bash <(curl -s https://codecov.io/bash) -t 7d4968eb-381b-4456-87bc-41bdfe331648
+
 vet:
 	@go vet -c=2
 
