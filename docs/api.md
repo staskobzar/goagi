@@ -270,7 +270,7 @@ Hangup hangs up the specified channel\. If no channel name is given\, hangs up t
 func (agi *AGI) IsHungup() bool
 ```
 
-IsHungup returns true if AGI channel recieved HANGUP signal
+IsHungup returns true if AGI channel received HANGUP signal
 
 ### func \(\*AGI\) [ReceiveChar](<https://github.com/staskobzar/goagi/blob/master/command.go#L192>)
 
