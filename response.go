@@ -84,7 +84,7 @@ func (agi *AGI) parseResponse(data string, code int) (Response, error) {
 
 	if len(data) < 4 {
 		agi.dbg(" [!] response is invalid: %q", data)
-		return nil, ErrAGI.Msg("Recieved response is invalid: %q", data)
+		return nil, ErrAGI.Msg("Received response is invalid: %q", data)
 	}
 
 	if code == codeEarly {

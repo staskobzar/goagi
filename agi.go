@@ -97,7 +97,7 @@ func (agi *AGI) EnvArgs() []string {
 	return agi.arg
 }
 
-// IsHungup returns true if AGI channel recieved HANGUP signal
+// IsHungup returns true if AGI channel received HANGUP signal
 func (agi *AGI) IsHungup() bool {
 	return agi.isHUP
 }
