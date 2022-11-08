@@ -17,7 +17,9 @@ func (agi *AGI) Answer() (Response, error) {
 }
 
 // AsyncAGIBreak Interrupts Async AGI
+//
 //	Interrupts expected flow of Async AGI commands and returns control
+//
 // to previous source (typically, the PBX dialplan).
 func (agi *AGI) AsyncAGIBreak() (Response, error) {
 	return agi.execute("ASYNCAGI BREAK\n")
@@ -62,7 +64,6 @@ Example:
 	agi.ControlStreamFile("prompt_en", "19", "3000", "#", "0", "#", "1600")
 	agi.ControlStreamFile("prompt_en", "")
 	agi.ControlStreamFile("prompt_en", "19", "", "", "", "#", "1600")
-
 */
 func (agi *AGI) ControlStreamFile(filename, digits string, args ...string) (Response, error) {
 	cmd := fmt.Sprintf("CONTROL STREAM FILE %s %q", filename, digits)
@@ -80,6 +81,7 @@ func (agi *AGI) ControlStreamFile(filename, digits string, args ...string) (Resp
 }
 
 // DatabaseDel deletes an entry in the Asterisk database for a given family and key.
+//
 //	Returns status and error if fails.
 func (agi *AGI) DatabaseDel(family, key string) (Response, error) {
 	cmd := fmt.Sprintf("DATABASE DEL %s %s\n", family, key)
@@ -93,8 +95,9 @@ func (agi *AGI) DatabaseDelTree(family, keytree string) (Response, error) {
 }
 
 // DatabaseGet Retrieves an entry in the Asterisk database for a given family and key.
-//	Returns value as string or error if failed or value not set
-//  Response.Value() for result
+//
+//		Returns value as string or error if failed or value not set
+//	 Response.Value() for result
 func (agi *AGI) DatabaseGet(family, key string) (Response, error) {
 	cmd := fmt.Sprintf("DATABASE GET %s %s\n", family, key)
 	return agi.execute(cmd)
@@ -115,7 +118,7 @@ func (agi *AGI) Exec(app, opts string) (Response, error) {
 
 /*
 GetData Stream the given file, and receive DTMF data.
-Note: when timeout is 0 then Asterisk will use 6 secods.
+Note: when timeout is 0 then Asterisk will use 6 seconds.
 Note: Asterisk has strange way to handle get data response.
 Contrary to other responses, where result has numeric value,
 here asterisk puts DTMF to sent by user to result and this value
@@ -155,6 +158,7 @@ func (agi *AGI) GetFullVariable(name, channel string) (Response, error) {
 }
 
 // GetOption Stream file, prompt for DTMF, with timeout.
+//
 //	Behaves similar to STREAM FILE but used with a timeout option.
 //	Returns digit pressed, offset and error
 func (agi *AGI) GetOption(filename, digits string, timeout int32) (Response, error) {
@@ -220,7 +224,7 @@ despite the lack of dtmf digits or reaching timeout.
 silence is the number of seconds of silence that are permitted before the
 recording is terminated, regardless of the escape_digits or timeout arguments
 
-If interupted by DTMF, digits will be available in Response.Data()
+If interrupted by DTMF, digits will be available in Response.Data()
 */
 func (agi *AGI) RecordFile(file, format, escDigits string,
 	timeout, offset int, beep bool, silence int) (Response, error) {
@@ -256,8 +260,8 @@ func (agi *AGI) RecordFile(file, format, escDigits string,
 
 // SayAlpha says a given character string, returning early if any of the given
 // DTMF digits are received on the channel.
-func (agi *AGI) SayAlpha(number, escDigits string) (Response, error) {
-	cmd := fmt.Sprintf("SAY ALPHA %s %q\n", number, escDigits)
+func (agi *AGI) SayAlpha(line, escDigits string) (Response, error) {
+	cmd := fmt.Sprintf("SAY ALPHA %s %q\n", line, escDigits)
 	return agi.execute(cmd)
 }
 

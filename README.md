@@ -9,7 +9,7 @@
 
 
 
-Simple library that helps to build AGI sctipts or FastAGI servers with Go.
+Simple library that helps to build AGI scripts or FastAGI servers with Go.
 ```go
 import "github.com/staskobzar/goagi"
 ```
@@ -21,7 +21,7 @@ API documentation [link is here](docs/api.md).
 AGI object is created with ```New``` [method](docs/api.md#func-new) with three arguments:
 - Reader [interface](docs/api.md#type-reader)
 - Writer [interface](docs/api.md#type-response)
-- Debuger [interface](docs/api.md#type-debugger)
+- Debugger [interface](docs/api.md#type-debugger)
 
 Debugger interface is required only for debugging and usually ```nil```. See below for more details.
 

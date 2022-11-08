@@ -33,7 +33,7 @@ import "github.com/staskobzar/goagi"
   - [func (agi *AGI) ReceiveText(timeout int) (Response, error)](<#func-agi-receivetext>)
   - [func (agi *AGI) RecordFile(file, format, escDigits string,
     timeout, offset int, beep bool, silence int) (Response, error)](<#func-agi-recordfile>)
-  - [func (agi *AGI) SayAlpha(number, escDigits string) (Response, error)](<#func-agi-sayalpha>)
+  - [func (agi *AGI) SayAlpha(line, escDigits string) (Response, error)](<#func-agi-sayalpha>)
   - [func (agi *AGI) SayDate(date, escDigits string) (Response, error)](<#func-agi-saydate>)
   - [func (agi *AGI) SayDatetime(time, escDigits, format, timezone string) (Response, error)](<#func-agi-saydatetime>)
   - [func (agi *AGI) SayDigits(number, escDigits string) (Response, error)](<#func-agi-saydigits>)
@@ -226,7 +226,7 @@ Exec executes application with given options\.
 func (agi *AGI) GetData(file string, timeout, maxdigit int) (Response, error)
 ```
 
-GetData Stream the given file\, and receive DTMF data\. Note: when timeout is 0 then Asterisk will use 6 secods\. Note: Asterisk has strange way to handle get data response\. Contrary to other responses\, where result has numeric value\, here asterisk puts DTMF to sent by user to result and this value may contain "\#" and "\*"\.
+GetData Stream the given file\, and receive DTMF data\. Note: when timeout is 0 then Asterisk will use 6 seconds\. Note: Asterisk has strange way to handle get data response\. Contrary to other responses\, where result has numeric value\, here asterisk puts DTMF to sent by user to result and this value may contain "\#" and "\*"\.
 
 To get DTMF sent by user use Response\.Data\(\)
 
@@ -311,12 +311,12 @@ silence is the number of seconds of silence allowed before the function returns 
 
 silence is the number of seconds of silence that are permitted before the recording is terminated\, regardless of the escape\_digits or timeout arguments
 
-If interupted by DTMF\, digits will be available in Response\.Data\(\)
+If interrupted by DTMF\, digits will be available in Response\.Data\(\)
 
 ### func \(\*AGI\) [SayAlpha](<https://github.com/staskobzar/goagi/blob/master/command.go#L259>)
 
 ```go
-func (agi *AGI) SayAlpha(number, escDigits string) (Response, error)
+func (agi *AGI) SayAlpha(line, escDigits string) (Response, error)
 ```
 
 SayAlpha says a given character string\, returning early if any of the given DTMF digits are received on the channel\.
@@ -501,7 +501,7 @@ type Error struct {
 func (e *Error) Error() string
 ```
 
-Error messge for the Error object
+Error message for the Error object
 
 ### func \(\*Error\) [Msg](<https://github.com/staskobzar/goagi/blob/master/error.go#L16>)
 
