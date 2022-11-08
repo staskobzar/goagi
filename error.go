@@ -18,7 +18,7 @@ func (e *Error) Msg(msg string, args ...interface{}) error {
 	return e
 }
 
-// Error messge for the Error object
+// Error message for the Error object
 func (e *Error) Error() string {
 	return fmt.Sprintf("%s: %s", e.s, e.e)
 }

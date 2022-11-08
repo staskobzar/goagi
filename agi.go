@@ -64,7 +64,6 @@ Parameters:
 - Writer that implements Write method
 
 - Debugger that allows to deep library debugging. Nil for production.
-
 */
 func New(r Reader, w Writer, dbg Debugger) (*AGI, error) {
 	agi := &AGI{
@@ -79,6 +78,11 @@ func New(r Reader, w Writer, dbg Debugger) (*AGI, error) {
 	}
 	agi.sessionSetup(sessData)
 	return agi, nil
+}
+
+func (agi *AGI) Close() {
+	agi.env = nil
+	agi.arg = nil
 }
 
 // Env returns AGI environment variable by key
@@ -149,6 +153,7 @@ func (agi *AGI) read() (resp string, code int, err error) {
 		resp = builder.String()
 		if codeMatch, ok := matchCode(line); ok {
 			code = codeMatch
+			builder.Reset()
 			return
 		}
 
