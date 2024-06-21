@@ -28,3 +28,7 @@ docmd:
 clean:
 	rm -f coverage.out
 	go clean
+
+lint:
+	typos --config=.typos.toml
+	golangci-lint run

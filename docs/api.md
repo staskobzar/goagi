@@ -146,7 +146,7 @@ Return values:
 func (agi *AGI) Command(cmd string) (Response, error)
 ```
 
-Command sends command as string to the AGI and returns response valus with text response
+Command sends command as string to the AGI and returns response values with text response
 
 ### func \(\*AGI\) [ControlStreamFile](<https://github.com/staskobzar/goagi/blob/master/command.go#L67>)
 
