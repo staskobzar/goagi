@@ -14,7 +14,8 @@ Simple library that helps to build AGI scripts or FastAGI servers with Go.
 import "github.com/staskobzar/goagi"
 ```
 
-API local documentation [link is here](docs/api.md) or [go.dev generated](https://pkg.go.dev/github.com/staskobzar/goagi) documentation.
+API local documentation [link is here](docs/api.md) or 
+[go.dev generated](https://pkg.go.dev/github.com/staskobzar/goagi) documentation.
 
 ## Usage FastAGI
 
