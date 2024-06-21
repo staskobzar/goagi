@@ -1,8 +1,10 @@
 // Example of usage NewAGI for Asterisk.
+//
 //	Dialplan example:
 //		exten => _X.,1,NoOp(Test goagi)
 //		 same => n,Answer()
 //		 same => n,AGI(/path/to/application)
+//
 // Reproduces Asterisk agi-test.agi script
 package main
 
@@ -14,9 +16,7 @@ import (
 	"github.com/staskobzar/goagi"
 )
 
-var (
-	tests, fail, pass int
-)
+var tests, fail, pass int
 
 func checkResult(err error, resp goagi.Response) {
 	tests++
@@ -31,7 +31,7 @@ func checkResult(err error, resp goagi.Response) {
 	log.Printf("Response endpos: %s", resp.EndPos())
 }
 
-func main() {
+func main() { //nolint:typecheck
 	agi, err := goagi.New(os.Stdin, os.Stdout, nil)
 	if err != nil {
 		log.Fatalln(err)

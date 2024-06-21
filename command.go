@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-// Command sends command as string to the AGI and returns response valus with
+// Command sends command as string to the AGI and returns response values with
 // text response
 func (agi *AGI) Command(cmd string) (Response, error) {
 	return agi.execute(cmd + "\n")
@@ -227,8 +227,8 @@ recording is terminated, regardless of the escape_digits or timeout arguments
 If interrupted by DTMF, digits will be available in Response.Data()
 */
 func (agi *AGI) RecordFile(file, format, escDigits string,
-	timeout, offset int, beep bool, silence int) (Response, error) {
-
+	timeout, offset int, beep bool, silence int,
+) (Response, error) {
 	cmd := "RECORD FILE"
 	cmd = fmt.Sprintf("%s %s %s %q %d", cmd, file, format, escDigits, timeout)
 	if offset > 0 {

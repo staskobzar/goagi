@@ -1,0 +1,10 @@
+[default.extend-words]
+#OpenSIPS = "OpenSIPS"
+
+[default.extend-identifiers]
+# this just isn't worth the cost of fixing
+exten = "exten"
+Exten = "Exten"
+
+#[files]
+#extend-exclude = ["*_test.go", "mock.go"]
