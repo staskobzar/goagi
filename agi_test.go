@@ -260,3 +260,34 @@ func TestExecute(t *testing.T) {
 	assert.NotNil(t, err)
 	assert.Contains(t, err.Error(), "closed")
 }
+
+func TestExecuteConcurrent(t *testing.T) {
+	agiConn, asteriskConn := net.Pipe()
+	agi := &AGI{reader: agiConn, writer: agiConn}
+
+	done := make(chan error)
+	go func() {
+		_, err := agi.execute("NOOP\n")
+		done <- err
+	}()
+
+	// first command is written and now waits for the response
+	buf := make([]byte, 32)
+	n, err := asteriskConn.Read(buf)
+	assert.Nil(t, err)
+	assert.Equal(t, "NOOP\n", string(buf[:n]))
+
+	resp, err := agi.execute("ANSWER\n")
+	assert.Nil(t, resp)
+	assert.ErrorIs(t, err, ErrConcurrentExecute)
+
+	asteriskConn.Write([]byte("200 result=1\n"))
+	assert.Nil(t, <-done)
+
+	// session is usable again once the first command is done
+	go asteriskConn.Read(buf)
+	go asteriskConn.Write([]byte("200 result=1\n"))
+	resp, err = agi.execute("ANSWER\n")
+	assert.Nil(t, err)
+	assert.Equal(t, 200, resp.Code())
+}
