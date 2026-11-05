@@ -3,10 +3,19 @@ package goagi
 import (
 	"bufio"
 	"strings"
+	"sync"
 )
 
 // ErrAGI goagi error
 var ErrAGI = newError("AGI session")
+
+// ErrConcurrentExecute is returned when a command is sent while another
+// command of the same AGI session is still waiting for its response.
+// AGI session is not safe for concurrent use.
+var ErrConcurrentExecute = &Error{
+	s: "AGI session",
+	e: "concurrent command execution is not allowed",
+}
 
 // Reader interface for AGI object. Can be net.Conn, os.File or crafted
 type Reader interface {
@@ -32,6 +41,7 @@ type AGI struct {
 	writer   Writer
 	isHUP    bool
 	debugger Debugger
+	mu       sync.Mutex
 }
 
 const (
@@ -207,6 +217,11 @@ func (agi *AGI) write(command []byte) error {
 // write command, read and parse response
 func (agi *AGI) execute(cmd string) (Response, error) {
 	agi.dbg("[>] execute cmd: %q", cmd)
+	if !agi.mu.TryLock() {
+		return nil, ErrConcurrentExecute
+	}
+	defer agi.mu.Unlock()
+
 	if err := agi.write([]byte(cmd)); err != nil {
 		return nil, err
 	}
